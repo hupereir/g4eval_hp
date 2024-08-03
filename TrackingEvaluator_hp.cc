@@ -881,7 +881,10 @@ void TrackingEvaluator_hp::evaluate_tracks()
       // add to track
       track_struct._clusters.push_back( cluster_struct );
     }
-    m_container->addTrack( track_struct );
+
+    if(track_struct._nclusters_micromegas>0 || !(m_flags&MicromegasOnly))
+    {m_container->addTrack( track_struct );}
+
   }
 }
 

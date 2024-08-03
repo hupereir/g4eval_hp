@@ -482,7 +482,8 @@ class TrackingEvaluator_hp : public SubsysReco
     EvalTracks = 1<<2,
     EvalTrackPairs = 1<<3,
     PrintClusters = 1<<4,
-    PrintTracks = 1<<5
+    PrintTracks = 1<<5,
+    MicromegasOnly = 1<<6
   };
 
   //! set flags. Should be a bitwise or of Flags enum
