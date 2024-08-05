@@ -592,6 +592,7 @@ int TrackingEvaluator_hp::load_nodes( PHCompositeNode* topNode )
   m_micromegas_geom_container = findNode::getClass<PHG4CylinderGeomContainer>(topNode, "CYLINDERGEOM_MICROMEGAS_FULL" );
 
   // tpc distortion corrections
+  m_dcc_module_edge = findNode::getClass<TpcDistortionCorrectionContainer>(topNode, "TpcDistortionCorrectionContainerModuleEdge");
   m_dcc_static = findNode::getClass<TpcDistortionCorrectionContainer>(topNode,"TpcDistortionCorrectionContainerStatic");
   m_dcc_average = findNode::getClass<TpcDistortionCorrectionContainer>(topNode,"TpcDistortionCorrectionContainerAverage");
   m_dcc_fluctuation = findNode::getClass<TpcDistortionCorrectionContainer>(topNode,"TpcDistortionCorrectionContainerFluctuation");
@@ -1621,6 +1622,11 @@ Acts::Vector3 TrackingEvaluator_hp::get_global_position( TrkrDefs::cluskey key, 
     globalPosition.z() = m_clusterCrossingCorrection.correctZ(globalPosition.z(), side, crossing);
 
     // apply distortion corrections
+    if(m_dcc_module_edge)
+    {
+      globalPosition = m_distortionCorrection.get_corrected_position( globalPosition, m_dcc_module_edge );
+    }
+
     if(m_dcc_static)
     {
       globalPosition = m_distortionCorrection.get_corrected_position( globalPosition, m_dcc_static );
