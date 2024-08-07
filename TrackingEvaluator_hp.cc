@@ -617,10 +617,13 @@ void TrackingEvaluator_hp::evaluate_event()
   if( m_gl1rawhit )
   {
     event._gtm_bco = m_gl1rawhit->get_bco()&0xFFFFFFFFFF;
-    std::cout << "TrackingEvaluator_hp::evaluate_event - bco: "
-      // << "0x" << std::hex << event._gtm_bco << std::dec
-      << event._gtm_bco
-      << std::endl;
+
+    if( Verbosity() )
+    {
+      std::cout << "TrackingEvaluator_hp::evaluate_event - bco: "
+        << event._gtm_bco
+        << std::endl;
+    }
   }
 
   // number of micromegas raw hits
@@ -800,6 +803,14 @@ void TrackingEvaluator_hp::evaluate_tracks()
       { std::cout << "TrackingEvaluator_hp::evaluate_tracks - could not get mask for particle " << id << std::endl; }
     }
 
+    // track crossing
+    const auto crossing = track->get_crossing();
+    if(crossing == SHRT_MAX)
+    {
+      std::cout << "TrackingEvaluator_hp::evaluate_tracks - invalid crossing, track ignored." << std::endl;
+      continue;
+    }
+
     // loop over clusters
     for( const auto& cluster_key:get_cluster_keys( track ) )
     {
@@ -814,9 +825,15 @@ void TrackingEvaluator_hp::evaluate_tracks()
       }
 
       // create new cluster struct
-      auto cluster_struct = create_cluster( cluster_key, cluster );
+      auto cluster_struct = create_cluster( cluster_key, cluster, crossing );
       add_cluster_size( cluster_struct, cluster_key, m_cluster_hit_map );
       add_cluster_energy( cluster_struct, cluster_key, m_cluster_hit_map, m_hitsetcontainer );
+
+      std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
+        << " track id: " << track_id
+        << " layer: " << (int) TrkrDefs::getLayer(cluster_key)
+        << " position: " << cluster_struct._x << ", " << cluster_struct._y << ", " << cluster_struct._z
+        << std::endl;
 
       // truth information
       const auto g4hits = find_g4hits( cluster_key );
@@ -1205,10 +1222,10 @@ int TrackingEvaluator_hp::get_embed( PHG4Particle* particle ) const
 { return (m_g4truthinfo && particle) ? m_g4truthinfo->isEmbeded( particle->get_primary_id() ):0; }
 
 //_____________________________________________________________________
-TrackingEvaluator_hp::ClusterStruct TrackingEvaluator_hp::create_cluster( TrkrDefs::cluskey key, TrkrCluster* cluster ) const
+TrackingEvaluator_hp::ClusterStruct TrackingEvaluator_hp::create_cluster( TrkrDefs::cluskey key, TrkrCluster* cluster, short int crossing ) const
 {
   // get global coordinates
-  const auto global = get_global_position(key, cluster);
+  const auto global = get_global_position(key, cluster, crossing);
 
   // apply distortion corrections
   TrackingEvaluator_hp::ClusterStruct cluster_struct;

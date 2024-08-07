@@ -567,7 +567,7 @@ class TrackingEvaluator_hp : public SubsysReco
   int get_embed(PHG4Particle*) const;
 
   //! create cluster structure from cluster
-  ClusterStruct create_cluster( TrkrDefs::cluskey, TrkrCluster* ) const;
+  ClusterStruct create_cluster( TrkrDefs::cluskey, TrkrCluster*, short int /*crossing*/ = 0 ) const;
 
   //! add track information to a cluster
   void add_trk_information( ClusterStruct&, SvtxTrackState* ) const;
