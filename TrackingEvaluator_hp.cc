@@ -829,11 +829,11 @@ void TrackingEvaluator_hp::evaluate_tracks()
       add_cluster_size( cluster_struct, cluster_key, m_cluster_hit_map );
       add_cluster_energy( cluster_struct, cluster_key, m_cluster_hit_map, m_hitsetcontainer );
 
-      std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
-        << " track id: " << track_id
-        << " layer: " << (int) TrkrDefs::getLayer(cluster_key)
-        << " position: " << cluster_struct._x << ", " << cluster_struct._y << ", " << cluster_struct._z
-        << std::endl;
+//       std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
+//         << " track id: " << track_id
+//         << " layer: " << (int) TrkrDefs::getLayer(cluster_key)
+//         << " position: " << cluster_struct._x << ", " << cluster_struct._y << ", " << cluster_struct._z
+//         << std::endl;
 
       // truth information
       const auto g4hits = find_g4hits( cluster_key );
