@@ -886,6 +886,7 @@ void TrackingEvaluator_hp::evaluate_tracks()
 //       std::cout << "TrackingEvaluator_hp::evaluate_tracks - cluster_key:" << cluster_key << " state key: " << state_iter->second.get_clusKey() << std::endl;
 
       // find track state that match cluster
+      bool found = false;
       for( auto state_iter = track->begin_states(); state_iter != track->end_states(); ++state_iter )
       {
         const auto& [pathlengh, state] = *state_iter;
@@ -894,9 +895,14 @@ void TrackingEvaluator_hp::evaluate_tracks()
           // store track state in cluster struct
           if( is_micromegas ) add_trk_information_micromegas( cluster_struct, state );
           else add_trk_information( cluster_struct, state );
+          found = true;
           break;
         }
       }
+
+      if( !found )
+      { std::cout << "TrackingEvaluator_hp::evaluate_tracks - no state vector found for layer: " << cluster_struct._layer << std::endl; }
+
       // some printout
       if( Verbosity() )
       {
