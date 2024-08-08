@@ -866,27 +866,37 @@ void TrackingEvaluator_hp::evaluate_tracks()
 
       }
 
-      // find track state that is the closest to cluster
-      /* this assumes that both clusters and states are sorted along r */
-      const auto radius( cluster_struct._r );
+//       // find track state that is the closest to cluster
+//       /* this assumes that both clusters and states are sorted along r */
+//       const auto radius( cluster_struct._r );
+//
+//       float dr_min = -1;
+//       auto state_iter = track->begin_states();
+//       for( auto iter = state_iter; iter != track->end_states(); ++iter )
+//       {
+//         const auto dr = std::abs( radius - get_r( iter->second->get_x(), iter->second->get_y() ) );
+//         if( dr_min < 0 || dr < dr_min )
+//         {
+//           state_iter = iter;
+//           dr_min = dr;
+//         }
+//       }
+//
+//       // check association
+//       std::cout << "TrackingEvaluator_hp::evaluate_tracks - cluster_key:" << cluster_key << " state key: " << state_iter->second.get_clusKey() << std::endl;
 
-      float dr_min = -1;
-      auto state_iter = track->begin_states();
-      for( auto iter = state_iter; iter != track->end_states(); ++iter )
+      // find track state that match cluster
+      for( auto state_iter = track->begin_states(); state_iter != track->end_states(); ++state_iter )
       {
-        const auto dr = std::abs( radius - get_r( iter->second->get_x(), iter->second->get_y() ) );
-        if( dr_min < 0 || dr < dr_min )
+        const auto& [pathlengh, state] = *state_iter;
+        if( state->get_cluskey() == cluster_key )
         {
-          state_iter = iter;
-          dr_min = dr;
+          // store track state in cluster struct
+          if( is_micromegas ) add_trk_information_micromegas( cluster_struct, state );
+          else add_trk_information( cluster_struct, state );
+          break;
         }
       }
-
-      // store track state in cluster struct
-      if( is_micromegas ) add_trk_information_micromegas( cluster_struct, state_iter->second );
-      else add_trk_information( cluster_struct, state_iter->second );
-
-
       // some printout
       if( Verbosity() )
       {
