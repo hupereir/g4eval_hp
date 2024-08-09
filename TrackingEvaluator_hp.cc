@@ -811,6 +811,13 @@ void TrackingEvaluator_hp::evaluate_tracks()
       continue;
     }
 
+    // save
+    track_struct._crossing = crossing;
+//     std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
+//       << " track id: " << track_id
+//       << " crossing: " << crossing
+//       << std::endl;
+
     // loop over clusters
     for( const auto& cluster_key:get_cluster_keys( track ) )
     {
@@ -896,12 +903,26 @@ void TrackingEvaluator_hp::evaluate_tracks()
           if( is_micromegas ) add_trk_information_micromegas( cluster_struct, state );
           else add_trk_information( cluster_struct, state );
           found = true;
+
+          if( Verbosity())
+          {
+            std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
+              << " track id: " << track_id
+              << " state vector found for layer: " << cluster_struct._layer
+              << std::endl;
+          }
+
           break;
         }
       }
 
-      if( !found )
-      { std::cout << "TrackingEvaluator_hp::evaluate_tracks - no state vector found for layer: " << cluster_struct._layer << std::endl; }
+      if((!found) && Verbosity())
+      {
+        std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
+          << " track id: " << track_id
+          << " no state vector found for layer: " << cluster_struct._layer
+          << std::endl;
+      }
 
       // some printout
       if( Verbosity() )

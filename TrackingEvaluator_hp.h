@@ -137,7 +137,6 @@ class TrackingEvaluator_hp : public SubsysReco
     //! number of particles associated to this cluster
     unsigned int _ncontributors = 0;
 
-
     //! number of hits along phi and along z
     unsigned int _phi_size = 0;
     unsigned int _z_size = 0;
@@ -261,6 +260,9 @@ class TrackingEvaluator_hp : public SubsysReco
 
     int _charge = 0;
     unsigned int _nclusters = 0;
+
+    /// crossing
+    unsigned int _crossing = 0;
 
     /// mask of layers for which there is a cluster in the track
     int64_t _mask = 0LL;
@@ -596,7 +598,7 @@ class TrackingEvaluator_hp : public SubsysReco
   /**
    * uses ActsTransformation to convert cluster local position into global coordinates
    */
-  Acts::Vector3 get_global_position(TrkrDefs::cluskey, TrkrCluster*, short int crossing = 0) const;
+  Acts::Vector3 get_global_position(TrkrDefs::cluskey, TrkrCluster*, short int /*crossing*/ = 0) const;
 
   //! evaluation node
   Container* m_container = nullptr;
