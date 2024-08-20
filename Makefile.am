@@ -38,6 +38,7 @@ pkginclude_HEADERS = \
   MicromegasClusterEvaluator_hp.h \
   MicromegasEvaluator_hp.h \
   MicromegasGeometryContainer.h \
+  MicromegasTrackEvaluator_hp.h \
   SimEvaluator_hp.h \
   TrackingEvaluator_hp.h
 
@@ -45,6 +46,7 @@ ROOTDICTS = \
   MicromegasClusterEvaluator_hp_Dict.cc \
   MicromegasEvaluator_hp_Dict.cc \
   MicromegasGeometryContainer_Dict.cc \
+  MicromegasTrackEvaluator_hp_Dict.cc \
   SimEvaluator_hp_Dict.cc \
   TrackingEvaluator_hp_Dict.cc
 
@@ -53,6 +55,7 @@ nobase_dist_pcm_DATA = \
   MicromegasClusterEvaluator_hp_Dict_rdict.pcm \
   MicromegasEvaluator_hp_Dict_rdict.pcm \
   MicromegasGeometryContainer_Dict_rdict.pcm \
+  MicromegasTrackEvaluator_hp_Dict_rdict.pcm \
   SimEvaluator_hp_Dict_rdict.pcm \
   TrackingEvaluator_hp_Dict_rdict.pcm
 
@@ -62,6 +65,7 @@ libg4eval_hp_la_SOURCES = \
   MicromegasClusterEvaluator_hp.cc \
   MicromegasEvaluator_hp.cc \
   MicromegasGeometryContainer.cc \
+  MicromegasTrackEvaluator_hp.cc \
   SimEvaluator_hp.cc \
   TrackingEvaluator_hp.cc
 

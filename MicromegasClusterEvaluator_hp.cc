@@ -132,12 +132,6 @@ int MicromegasClusterEvaluator_hp::Init(PHCompositeNode* topNode )
 //_____________________________________________________________________
 int MicromegasClusterEvaluator_hp::InitRun(PHCompositeNode* topNode )
 {
-  // load geometry
-  PHG4CylinderGeomContainer* geonode = nullptr;
-  for( const auto& geonodename: {"CYLINDERGEOM_MICROMEGAS_FULL", "CYLINDERGEOM_MICROMEGAS" } )
-  { if(( geonode =  findNode::getClass<PHG4CylinderGeomContainer>(topNode, geonodename))) break; }
-  assert(geonode);
-
   return Fun4AllReturnCodes::EVENT_OK;
 }
 
@@ -165,11 +159,6 @@ int MicromegasClusterEvaluator_hp::load_nodes( PHCompositeNode* topNode )
   // acts geometry
   m_tGeometry = findNode::getClass<ActsGeometry>(topNode, "ActsGeometry");
   assert( m_tGeometry );
-
-  // geometry
-  const std::string geonodename = "CYLINDERGEOM_MICROMEGAS_FULL";
-  m_geonode =  findNode::getClass<PHG4CylinderGeomContainer>(topNode, geonodename.c_str());
-  assert(m_geonode);
 
   // hitset container
   m_hitsetcontainer = findNode::getClass<TrkrHitSetContainer>(topNode, "TRKR_HITSET");

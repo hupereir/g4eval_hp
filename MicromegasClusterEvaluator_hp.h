@@ -133,9 +133,6 @@ class MicromegasClusterEvaluator_hp : public SubsysReco
   /// Acts tracking geometry for surface lookup
   ActsGeometry *m_tGeometry = nullptr;
 
-  /// gemometry
-  PHG4CylinderGeomContainer* m_geonode = nullptr;
-
   //! hits
   TrkrHitSetContainer* m_hitsetcontainer = nullptr;
 

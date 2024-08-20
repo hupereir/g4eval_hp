@@ -5,7 +5,6 @@
 #include <phool/PHObject.h>
 #include <tpc/TpcDistortionCorrection.h>
 #include <tpc/TpcClusterZCrossingCorrection.h>
-#include <trackbase/ClusterErrorPara.h>
 #include <trackbase/TrkrDefs.h>
 #include <trackbase_historic/ActsTransformations.h>
 
@@ -492,7 +491,7 @@ class TrackingEvaluator_hp : public SubsysReco
   void set_flags( int flags )
   { m_flags = flags; }
 
-  //! tracl map name
+  //! track map name
   void set_trackmapname( const std::string& value )
   { m_trackmapname = value; }
 
@@ -673,9 +672,6 @@ class TrackingEvaluator_hp : public SubsysReco
   /** copied from SimEvaluator_hp */
   using G4ParticleMap = std::map<int,int64_t>;
   G4ParticleMap m_g4particle_map;
-
-  /// cluster error parametrisation
-  ClusterErrorPara m_cluster_error_parametrization;
 
 };
 

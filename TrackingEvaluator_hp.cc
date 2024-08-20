@@ -1661,7 +1661,6 @@ void TrackingEvaluator_hp::fill_g4particle_map()
 
 }
 
-
 //_________________________________________________________________________________
 Acts::Vector3 TrackingEvaluator_hp::get_global_position( TrkrDefs::cluskey key, TrkrCluster* cluster, short int crossing ) const
 {
