@@ -138,10 +138,10 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
     ClusterStruct::List _clusters;
 
     // best micromegas clustser
-    ClusterStruct _cluster_best_phi;
+    ClusterStruct _best_cluster_phi;
 
     // best micromegas cluster
-    ClusterStruct _cluster_best_z;
+    ClusterStruct _best_cluster_z;
 
   };
 
