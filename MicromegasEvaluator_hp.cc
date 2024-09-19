@@ -78,26 +78,26 @@ namespace
     hit_struct._adc = hit->getAdc();
     return hit_struct;
   }
-  
+
   // TVector3 streamer
   inline std::ostream& operator << (std::ostream& out, const TVector3& v )
   {
     out << "(" << v.x() << ", " << v.y() << ", " << v.z() << ")";
     return out;
   }
-  
+
 }
 
 //_____________________________________________________________________
 void MicromegasEvaluator_hp::Container::Reset()
 {
   _tiles.clear();
-  
+
   // fill tiles
   for( uint layer:{55, 56} )
     for( uint tile = 0; tile < 8; ++tile )
   { _tiles.emplace_back( layer, tile ); }
-    
+
   _g4hits.clear();
   _hits.clear();
 }
@@ -183,9 +183,9 @@ int MicromegasEvaluator_hp::process_event(PHCompositeNode* topNode)
   if( first )
   {
     first = false;
-    if( m_flags & PrintGeometry ) print_micromegas_geometry( "micromegas_geometry.root" ); 
+    if( m_flags & PrintGeometry ) print_micromegas_geometry( "micromegas_geometry.root" );
   }
-  
+
   return Fun4AllReturnCodes::EVENT_OK;
 }
 
@@ -362,67 +362,71 @@ void MicromegasEvaluator_hp::print_micromegas_geometry( const std::string& filen
   std::cout << "MicromegasEvaluator_hp::print_micromegas_geometry" << std::endl;
 
   MicromegasGeometryContainer geometry_container;
-  
+
   // loop over layers
   const auto [begin,end] = m_geonode->get_begin_end();
   for( auto iter = begin; iter != end; ++iter )
   {
-    
+
     auto layergeom = dynamic_cast<CylinderGeomMicromegas*>(iter->second);
-    
+
     // get layer
-    const auto layer = layergeom->get_layer();
-    
+    const unsigned int layer = layergeom->get_layer();
+
     // get tiles
-    const auto tile_count = layergeom->get_tiles_count();
-        
+    const unsigned int tile_count = layergeom->get_tiles_count();
+
     // loop over tiles
-    for( size_t tileid = 0; tileid < tile_count; ++tileid )
+    for( unsigned int tileid = 0; tileid < tile_count; ++tileid )
     {
-      
+
       // strip length
-      const auto strip_length = layergeom->get_strip_length( tileid, m_tGeometry);      
-      
+      const auto strip_length = layergeom->get_strip_length( tileid, m_tGeometry);
+
       // strip count
       const auto strip_count = layergeom->get_strip_count( tileid, m_tGeometry );
 
       for( unsigned int stripnum = 0; stripnum < strip_count; ++stripnum )
       {
-      
+
         // get strip center, local coordinates
         const auto strip_center_local = layergeom->get_local_coordinates( tileid, m_tGeometry, stripnum );
-        TVector3 strip_begin_world;
-        TVector3 strip_end_world;
-                
         const auto segmentation = layergeom->get_segmentation_type();
         switch( segmentation )
         {
           case MicromegasDefs::SegmentationType::SEGMENTATION_PHI:
           {
-            
+
             const TVector3 strip_begin( strip_center_local.X(), -strip_length/2, 0 );
             const TVector3 strip_end( strip_center_local.X(), strip_length/2, 0 );
-            
+
             // convert to world coordinates and save
-            strip_begin_world = layergeom->get_world_from_local_coords( tileid, m_tGeometry, strip_begin );
-            strip_end_world = layergeom->get_world_from_local_coords( tileid, m_tGeometry, strip_end );            
+            const auto strip_begin_world = layergeom->get_world_from_local_coords( tileid, m_tGeometry, strip_begin );
+            const auto strip_end_world = layergeom->get_world_from_local_coords( tileid, m_tGeometry, strip_end );
+
+            geometry_container.add_strip(
+              { .layer=layer, .tile=tileid, .strip=stripnum },
+              { .local_begin=strip_begin, .local_end=strip_end, .global_begin=strip_begin_world, .global_end=strip_end_world } );
+
             break;
           }
-          
+
           case MicromegasDefs::SegmentationType::SEGMENTATION_Z:
           {
             const TVector3 strip_begin( -strip_length/2, strip_center_local.Y(), 0 );
             const TVector3 strip_end( strip_length/2, strip_center_local.Y(), 0 );
 
             // convert to world coordinates and save
-            strip_begin_world = layergeom->get_world_from_local_coords( tileid, m_tGeometry, strip_begin );
-            strip_end_world = layergeom->get_world_from_local_coords( tileid, m_tGeometry, strip_end );            
+            const auto strip_begin_world = layergeom->get_world_from_local_coords( tileid, m_tGeometry, strip_begin );
+            const auto strip_end_world = layergeom->get_world_from_local_coords( tileid, m_tGeometry, strip_end );
+
+            geometry_container.add_strip(
+              { .layer=layer, .tile=tileid, .strip=stripnum },
+              { .local_begin=strip_begin, .local_end=strip_end, .global_begin=strip_begin_world, .global_end=strip_end_world } );
+
             break;
           }
-      
         }
-
-        geometry_container.add_strip( layer, tileid, stripnum, strip_begin_world, strip_end_world );       
       }
     }
   }

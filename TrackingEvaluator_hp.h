@@ -3,8 +3,7 @@
 
 #include <fun4all/SubsysReco.h>
 #include <phool/PHObject.h>
-#include <tpc/TpcDistortionCorrection.h>
-#include <tpc/TpcClusterZCrossingCorrection.h>
+#include <tpc/TpcGlobalPositionWrapper.h>
 #include <trackbase/TrkrDefs.h>
 #include <trackbase_historic/ActsTransformations.h>
 
@@ -593,12 +592,6 @@ class TrackingEvaluator_hp : public SubsysReco
   //! fill MC track map
   void fill_g4particle_map();
 
-  /// get global position for a given cluster
-  /**
-   * uses ActsTransformation to convert cluster local position into global coordinates
-   */
-  Acts::Vector3 get_global_position(TrkrDefs::cluskey, TrkrCluster*, short int /*crossing*/ = 0) const;
-
   //! evaluation node
   Container* m_container = nullptr;
 
@@ -608,17 +601,8 @@ class TrackingEvaluator_hp : public SubsysReco
   /// Acts tracking geometry for surface lookup
   ActsGeometry *m_tGeometry = nullptr;
 
-  // crossing z correction
-  TpcClusterZCrossingCorrection m_clusterCrossingCorrection;
-
-  // distortion corrections
-  TpcDistortionCorrectionContainer* m_dcc_module_edge = nullptr;
-  TpcDistortionCorrectionContainer* m_dcc_static = nullptr;
-  TpcDistortionCorrectionContainer* m_dcc_average = nullptr;
-  TpcDistortionCorrectionContainer* m_dcc_fluctuation = nullptr;
-
-  /// tpc distortion correction utility class
-  TpcDistortionCorrection m_distortionCorrection;
+  //! global position wrapper
+  TpcGlobalPositionWrapper m_globalPositionWrapper;
 
   //! GL1
   Gl1RawHit* m_gl1rawhit = nullptr;

@@ -592,10 +592,7 @@ int TrackingEvaluator_hp::load_nodes( PHCompositeNode* topNode )
   m_micromegas_geom_container = findNode::getClass<PHG4CylinderGeomContainer>(topNode, "CYLINDERGEOM_MICROMEGAS_FULL" );
 
   // tpc distortion corrections
-  m_dcc_module_edge = findNode::getClass<TpcDistortionCorrectionContainer>(topNode, "TpcDistortionCorrectionContainerModuleEdge");
-  m_dcc_static = findNode::getClass<TpcDistortionCorrectionContainer>(topNode,"TpcDistortionCorrectionContainerStatic");
-  m_dcc_average = findNode::getClass<TpcDistortionCorrectionContainer>(topNode,"TpcDistortionCorrectionContainerAverage");
-  m_dcc_fluctuation = findNode::getClass<TpcDistortionCorrectionContainer>(topNode,"TpcDistortionCorrectionContainerFluctuation");
+  m_globalPositionWrapper.loadNodes(topNode);
 
   return Fun4AllReturnCodes::EVENT_OK;
 
@@ -1004,7 +1001,7 @@ void TrackingEvaluator_hp::print_cluster( TrkrDefs::cluskey cluster_key, TrkrClu
 {
   // get detector type
   const auto trkrId = TrkrDefs::getTrkrId( cluster_key );
-  const auto global = get_global_position(cluster_key, cluster);
+  const auto global = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(cluster_key, cluster, 0);
 //   const auto r = get_r( global.x(), global.y());
   std::cout
     << "TrackingEvaluator_hp::print_cluster -"
@@ -1110,6 +1107,8 @@ void TrackingEvaluator_hp::print_track(SvtxTrack* track) const
   std::cout << "TrackingEvaluator_hp::print_track - momentum: (" << track->get_px() << ", " << track->get_py() << ", " << track->get_pz() << ")" << std::endl;
   std::cout << "TrackingEvaluator_hp::print_track - clusters: " << get_cluster_keys( track ).size() << ", states: " << track->size_states() << std::endl;
 
+  const auto crossing = track->get_crossing();
+
   // loop over cluster keys
   if( false && m_cluster_map )
   {
@@ -1124,7 +1123,7 @@ void TrackingEvaluator_hp::print_track(SvtxTrack* track) const
       }
 
       // get global coordinates
-      const auto global = get_global_position(cluster_key, cluster);
+      const auto global = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(cluster_key, cluster, crossing);
 
       std::cout
         << "TrackingEvaluator_hp::print_track -"
@@ -1262,7 +1261,7 @@ int TrackingEvaluator_hp::get_embed( PHG4Particle* particle ) const
 TrackingEvaluator_hp::ClusterStruct TrackingEvaluator_hp::create_cluster( TrkrDefs::cluskey key, TrkrCluster* cluster, short int crossing ) const
 {
   // get global coordinates
-  const auto global = get_global_position(key, cluster, crossing);
+  const auto global = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(key, cluster, crossing);
 
   // apply distortion corrections
   TrackingEvaluator_hp::ClusterStruct cluster_struct;
@@ -1659,42 +1658,4 @@ void TrackingEvaluator_hp::fill_g4particle_map()
 
   }
 
-}
-
-//_________________________________________________________________________________
-Acts::Vector3 TrackingEvaluator_hp::get_global_position( TrkrDefs::cluskey key, TrkrCluster* cluster, short int crossing ) const
-{
-  // get global position from Acts transform
-  auto globalPosition = m_tGeometry->getGlobalPosition(key, cluster);
-
-  // for the TPC calculate the proper z based on crossing and side
-  const auto trkrid = TrkrDefs::getTrkrId(key);
-  if(trkrid ==  TrkrDefs::tpcId)
-  {
-    const auto side = TpcDefs::getSide(key);
-    globalPosition.z() = m_clusterCrossingCorrection.correctZ(globalPosition.z(), side, crossing);
-
-    // apply distortion corrections
-    if(m_dcc_module_edge)
-    {
-      globalPosition = m_distortionCorrection.get_corrected_position( globalPosition, m_dcc_module_edge );
-    }
-
-    if(m_dcc_static)
-    {
-      globalPosition = m_distortionCorrection.get_corrected_position( globalPosition, m_dcc_static );
-    }
-
-    if(m_dcc_average)
-    {
-      globalPosition = m_distortionCorrection.get_corrected_position( globalPosition, m_dcc_average );
-    }
-
-    if(m_dcc_fluctuation)
-    {
-      globalPosition = m_distortionCorrection.get_corrected_position( globalPosition, m_dcc_fluctuation );
-    }
-  }
-
-  return globalPosition;
 }
