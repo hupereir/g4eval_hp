@@ -143,6 +143,12 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
     // best micromegas cluster
     ClusterStruct _best_cluster_z;
 
+    // best micromegas clustser
+    ClusterStruct _found_cluster_phi;
+
+    // best micromegas cluster
+    ClusterStruct _found_cluster_z;
+
   };
 
   class Container: public PHObject

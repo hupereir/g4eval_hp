@@ -190,9 +190,6 @@ namespace
     return trackStruct;
   }
 
-  //! create cluster struct
-
-
 }
 
 //_____________________________________________________________________
@@ -337,16 +334,25 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
     {
       // detector type
       const auto detid = TrkrDefs::getTrkrId(cluster_key);
-      if( detid != TrkrDefs::tpcId ) continue;
 
-      // layer
-      const unsigned int layer = TrkrDefs::getLayer(cluster_key);
-      if (layer < _min_tpc_layer) continue;
+      if( detid == TrkrDefs::micromegasId )
+      {
+        const unsigned int layer = TrkrDefs::getLayer(cluster_key);
+        const auto cluster = m_cluster_map->findCluster(cluster_key);
+        if( layer == 55 ) track_struct._found_cluster_phi = create_cluster(cluster_key,cluster);
+        if( layer == 56 ) track_struct._found_cluster_z = create_cluster(cluster_key,cluster);
 
-      // get matching
-      const auto cluster = m_cluster_map->findCluster(cluster_key);
-      const auto global_position = get_global_position(cluster_key, cluster, crossing);
-      global_positions.push_back( global_position );
+      } else if( detid == TrkrDefs::tpcId ) {
+
+        // layer
+        const unsigned int layer = TrkrDefs::getLayer(cluster_key);
+        if (layer < _min_tpc_layer) continue;
+
+        // get matching
+        const auto cluster = m_cluster_map->findCluster(cluster_key);
+        const auto global_position = get_global_position(cluster_key, cluster, crossing);
+        global_positions.push_back( global_position );
+      }
 
     }
 
@@ -458,64 +464,13 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
       // generate tilesetid and get corresponding clusters
       const auto hitsetkey = MicromegasDefs::genHitSetKey(layer, segmentation_type, tileid);
 
-      // get hits from hitset map
-      const auto hitset = m_hitsetcontainer->findHitSet(hitsetkey);
-
       // get cluster from cluster range
       const auto mm_clusrange = m_cluster_map->getClusters(hitsetkey);
 
       // loop
       for(const auto& [cluster_key, cluster]:range_adaptor(mm_clusrange))
       {
-        ClusterStruct cluster_struct;
-        cluster_struct._layer = layer;
-        cluster_struct._tile = tileid;
-
-        // find associated hits
-        const auto range = m_cluster_hit_map->getHits(cluster_key);
-        cluster_struct._size = std::distance( range.first, range.second );
-
-        // loop over assiciated hits
-        unsigned int adc_max = 0;
-        for( auto iter = range.first; iter != range.second; ++iter )
-        {
-          const auto& [key,hitkey] = *iter;
-          assert( key == cluster_key );
-
-          // get strip
-          const auto strip = MicromegasDefs::getStrip( hitkey );
-
-          // get associated hit
-          const auto hit = hitset->getHit( hitkey );
-          assert( hit );
-
-          const auto adc = hit->getAdc();
-          if( adc > adc_max )
-          {
-            adc_max = adc;
-            cluster_struct._strip = strip;
-          }
-
-          // get adc, remove pedestal, increment total charge
-          const double pedestal = m_use_default_pedestal ?
-            m_default_pedestal:
-            m_calibration_data.get_pedestal_mapped(hitsetkey, strip);
-          cluster_struct._charge += (adc-pedestal);
-        }
-
-        // cluster region
-        cluster_struct._region = cluster_struct._strip/64;
-
-        // local position
-        cluster_struct._x_local = cluster->getLocalX();
-        cluster_struct._y_local = cluster->getLocalY();
-
-        // global position
-        const auto globalPosition = m_tGeometry->getGlobalPosition(cluster_key, cluster);
-        cluster_struct._x = globalPosition.x();
-        cluster_struct._y = globalPosition.y();
-        cluster_struct._z = globalPosition.z();
-
+        ClusterStruct cluster_struct = create_cluster(cluster_key, cluster);
         track_struct._clusters.push_back(cluster_struct);
 
         // get distance to track state
@@ -548,8 +503,6 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
 
     m_container->add_track( track_struct );
   }
-
-
 }
 
 //_________________________________________________________________________________
@@ -589,3 +542,67 @@ Acts::Vector3 MicromegasTrackEvaluator_hp::get_global_position( TrkrDefs::cluske
 
   return globalPosition;
 }
+
+//______________________________________________________________________________________________________________________
+MicromegasTrackEvaluator_hp::ClusterStruct MicromegasTrackEvaluator_hp::create_cluster( TrkrDefs::cluskey cluster_key, TrkrCluster* cluster) const
+{
+  MicromegasTrackEvaluator_hp::ClusterStruct cluster_struct;
+
+  cluster_struct._layer = TrkrDefs::getLayer(cluster_key);
+  cluster_struct._tile = MicromegasDefs::getTileId(cluster_key);
+
+  // find associated hits
+  const auto range = m_cluster_hit_map->getHits(cluster_key);
+  cluster_struct._size = std::distance( range.first, range.second );
+
+  /// Get the upper 32 bits from cluster keys
+  const auto hitsetkey = TrkrDefs::getHitSetKeyFromClusKey(cluster_key);
+
+  // get hits from hitset map
+  const auto hitset = m_hitsetcontainer->findHitSet(hitsetkey);
+
+  // loop over assiciated hits
+  unsigned int adc_max = 0;
+  for( auto iter = range.first; iter != range.second; ++iter )
+  {
+    const auto& [key,hitkey] = *iter;
+    assert( key == cluster_key );
+
+    // get strip
+    const auto strip = MicromegasDefs::getStrip( hitkey );
+
+    // get associated hit
+    const auto hit = hitset->getHit( hitkey );
+    assert( hit );
+
+    const auto adc = hit->getAdc();
+    if( adc > adc_max )
+    {
+      adc_max = adc;
+      cluster_struct._strip = strip;
+    }
+
+    // get adc, remove pedestal, increment total charge
+    const double pedestal = m_use_default_pedestal ?
+      m_default_pedestal:
+      m_calibration_data.get_pedestal_mapped(hitsetkey, strip);
+    cluster_struct._charge += (adc-pedestal);
+  }
+
+  // cluster region
+  cluster_struct._region = cluster_struct._strip/64;
+
+  // local position
+  cluster_struct._x_local = cluster->getLocalX();
+  cluster_struct._y_local = cluster->getLocalY();
+
+  // global position
+  const auto globalPosition = m_tGeometry->getGlobalPosition(cluster_key, cluster);
+  cluster_struct._x = globalPosition.x();
+  cluster_struct._y = globalPosition.y();
+  cluster_struct._z = globalPosition.z();
+
+  return cluster_struct;
+
+}
+
