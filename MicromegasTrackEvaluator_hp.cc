@@ -12,8 +12,6 @@
 #include <phool/PHCompositeNode.h>
 #include <phool/PHNodeIterator.h>
 
-#include <tpc/TpcDistortionCorrectionContainer.h>
-
 #include <trackbase/TpcDefs.h>
 #include <trackbase/ActsGeometry.h>
 #include <trackbase/TrkrCluster.h>
@@ -299,10 +297,7 @@ int MicromegasTrackEvaluator_hp::load_nodes( PHCompositeNode* topNode )
   assert(m_container);
 
   // tpc distortion corrections
-  m_dcc_module_edge = findNode::getClass<TpcDistortionCorrectionContainer>(topNode, "TpcDistortionCorrectionContainerModuleEdge");
-  m_dcc_static = findNode::getClass<TpcDistortionCorrectionContainer>(topNode,"TpcDistortionCorrectionContainerStatic");
-  m_dcc_average = findNode::getClass<TpcDistortionCorrectionContainer>(topNode,"TpcDistortionCorrectionContainerAverage");
-  m_dcc_fluctuation = findNode::getClass<TpcDistortionCorrectionContainer>(topNode,"TpcDistortionCorrectionContainerFluctuation");
+  m_globalPositionWrapper.loadNodes(topNode);
 
   return Fun4AllReturnCodes::EVENT_OK;
 }
@@ -350,7 +345,7 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
 
         // get matching
         const auto cluster = m_cluster_map->findCluster(cluster_key);
-        const auto global_position = get_global_position(cluster_key, cluster, crossing);
+        const auto global_position = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(cluster_key, cluster, crossing);
         global_positions.push_back( global_position );
       }
 
@@ -503,44 +498,6 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
 
     m_container->add_track( track_struct );
   }
-}
-
-//_________________________________________________________________________________
-Acts::Vector3 MicromegasTrackEvaluator_hp::get_global_position( TrkrDefs::cluskey key, TrkrCluster* cluster, short int crossing ) const
-{
-  // get global position from Acts transform
-  auto globalPosition = m_tGeometry->getGlobalPosition(key, cluster);
-
-  // for the TPC calculate the proper z based on crossing and side
-  const auto trkrid = TrkrDefs::getTrkrId(key);
-  if(trkrid ==  TrkrDefs::tpcId)
-  {
-    const auto side = TpcDefs::getSide(key);
-    globalPosition.z() = m_clusterCrossingCorrection.correctZ(globalPosition.z(), side, crossing);
-
-    // apply distortion corrections
-    if(m_dcc_module_edge)
-    {
-      globalPosition = m_distortionCorrection.get_corrected_position( globalPosition, m_dcc_module_edge );
-    }
-
-    if(m_dcc_static)
-    {
-      globalPosition = m_distortionCorrection.get_corrected_position( globalPosition, m_dcc_static );
-    }
-
-    if(m_dcc_average)
-    {
-      globalPosition = m_distortionCorrection.get_corrected_position( globalPosition, m_dcc_average );
-    }
-
-    if(m_dcc_fluctuation)
-    {
-      globalPosition = m_distortionCorrection.get_corrected_position( globalPosition, m_dcc_fluctuation );
-    }
-  }
-
-  return globalPosition;
 }
 
 //______________________________________________________________________________________________________________________

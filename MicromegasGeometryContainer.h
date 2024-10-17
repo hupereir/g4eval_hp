@@ -25,41 +25,17 @@ class MicromegasGeometryContainer : public PHObject
   /// destructor
   ~MicromegasGeometryContainer() override = default;
 
-  ///@name accessors
-  //@{
-
-  /// identify object
-  void identify(std::ostream &/*os*/ = std::cout) const override;
-
-  /// get strip begin from layer, tile and strip number
-  TVector3 get_strip_begin( unsigned int /*layer*/, unsigned int /*tile*/, unsigned int /*strip*/ ) const;
-
-  /// get strip begin from layer, tile and strip number
-  TVector3 get_strip_end( unsigned int /*layer*/, unsigned int /*tile*/, unsigned int /*strip*/ ) const;
-  
-  //@}
-
-  ///@name modifiers
-  //@{
-  
-  /// reset method
-  void Reset() override;
-
-  /// add strip information
-  void add_strip( unsigned int /*layer*/, unsigned int /*tile*/, unsigned int /*strip*/, const TVector3& /*begin*/, const TVector3& /*end*/ );
-
-  //@}
-  
+  /// strip id
   class StripId
   {
     public:
     unsigned int layer = 0;
     unsigned int tile = 0;
     unsigned int strip = 0;
-    
+
     bool operator == (const StripId& other ) const
     { return other.layer == layer && other.tile == tile && other.strip == strip; }
-    
+
     bool operator < (const StripId& other ) const
     {
       if( layer != other.layer ) return layer < other.layer;
@@ -68,12 +44,54 @@ class MicromegasGeometryContainer : public PHObject
     }
   };
 
+  // strip geometry
+  class StripGeometry
+  {
+    public:
+
+    TVector3 local_begin;
+    TVector3 local_end;
+
+    TVector3 global_begin;
+    TVector3 global_end;
+  };
+
+  ///@name accessors
+  //@{
+
+  /// identify object
+  void identify(std::ostream &/*os*/ = std::cout) const override;
+
+  /// get strip begin from layer, tile and strip number
+  TVector3 get_strip_local_begin( unsigned int /*layer*/, unsigned int /*tile*/, unsigned int /*strip*/ ) const;
+
+  /// get strip begin from layer, tile and strip number
+  TVector3 get_strip_local_end( unsigned int /*layer*/, unsigned int /*tile*/, unsigned int /*strip*/ ) const;
+
+  /// get strip begin from layer, tile and strip number
+  TVector3 get_strip_begin( unsigned int /*layer*/, unsigned int /*tile*/, unsigned int /*strip*/ ) const;
+
+  /// get strip begin from layer, tile and strip number
+  TVector3 get_strip_end( unsigned int /*layer*/, unsigned int /*tile*/, unsigned int /*strip*/ ) const;
+
+  //@}
+
+  ///@name modifiers
+  //@{
+
+  /// reset method
+  void Reset() override;
+
+  /// add strip
+  void add_strip( const StripId&, const StripGeometry& );
+
+  //@}
+
   private:
 
-  using strip_map_t = std::map<StripId, TVector3>;
-  strip_map_t m_strip_begin;
-  strip_map_t m_strip_end;
-  
+  using strip_map_t = std::map<StripId, StripGeometry>;
+  strip_map_t m_strips;
+
   ClassDefOverride(MicromegasGeometryContainer, 1)
 
 };

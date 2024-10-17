@@ -6,8 +6,7 @@
 #include <micromegas/MicromegasCalibrationData.h>
 #include <micromegas/MicromegasDefs.h>
 #include <phool/PHObject.h>
-#include <tpc/TpcDistortionCorrection.h>
-#include <tpc/TpcClusterZCrossingCorrection.h>
+#include <tpc/TpcGlobalPositionWrapper.h>
 #include <trackbase/TrkrDefs.h>
 
 #include <map>
@@ -217,26 +216,14 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
   //! create cluster structure from cluster
   ClusterStruct create_cluster( TrkrDefs::cluskey, TrkrCluster* ) const;
 
-  /// get global position for a given cluster
-  Acts::Vector3 get_global_position(TrkrDefs::cluskey, TrkrCluster*, short int /*crossing*/ = 0) const;
-
   /// cluster array
   Container* m_container = nullptr;
 
   /// Acts tracking geometry for surface lookup
   ActsGeometry *m_tGeometry = nullptr;
 
-  // crossing z correction
-  TpcClusterZCrossingCorrection m_clusterCrossingCorrection;
-
-  // distortion corrections
-  TpcDistortionCorrectionContainer* m_dcc_module_edge = nullptr;
-  TpcDistortionCorrectionContainer* m_dcc_static = nullptr;
-  TpcDistortionCorrectionContainer* m_dcc_average = nullptr;
-  TpcDistortionCorrectionContainer* m_dcc_fluctuation = nullptr;
-
-  /// tpc distortion correction utility class
-  TpcDistortionCorrection m_distortionCorrection;
+  //! global position wrapper
+  TpcGlobalPositionWrapper m_globalPositionWrapper;
 
   // micromegas geometry
   PHG4CylinderGeomContainer* m_micromegas_geomcontainer = nullptr;
