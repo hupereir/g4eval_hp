@@ -21,15 +21,16 @@ libg4eval_hp_la_LIBADD = \
   -lffarawobjects\
   -lfun4all \
   -lg4detectors_io \
-  -ltrackbase_historic_io \
-  -ltrack_io \
-  -ltpc \
-  -ltpc_io \
-  -lmvtx_io \
   -lintt_io \
+  -lmbd_io \
   -lmicromegas_io \
+  -lmvtx_io \
   -lphg4hit \
   -lphhepmc_io \
+  -ltpc \
+  -ltpc_io \
+  -ltrackbase_historic_io \
+  -ltrack_io \
   -lgsl \
   -lgslcblas
 

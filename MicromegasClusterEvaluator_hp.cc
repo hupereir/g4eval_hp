@@ -4,6 +4,9 @@
 
 #include <fun4all/Fun4AllReturnCodes.h>
 #include <g4detectors/PHG4CylinderGeomContainer.h>
+
+#include <mbd/MbdOut.h>
+
 #include <micromegas/CylinderGeomMicromegas.h>
 #include <micromegas/MicromegasDefs.h>
 #include <micromegas/MicromegasMapping.h>
@@ -80,6 +83,7 @@ void MicromegasClusterEvaluator_hp::Container::Reset()
   min_cluster_size.clear();
   min_cluster_charge.clear();
   first_cluster_strip.clear();
+  mbd_info = MbdInfo();
 }
 
 //_____________________________________________________________________
@@ -143,6 +147,7 @@ int MicromegasClusterEvaluator_hp::process_event(PHCompositeNode* topNode)
   if( res != Fun4AllReturnCodes::EVENT_OK ) return res;
   if( m_container ) m_container->Reset();
 
+  evaluate_mbd();
   evaluate_clusters();
 
   return Fun4AllReturnCodes::EVENT_OK;
@@ -164,14 +169,15 @@ int MicromegasClusterEvaluator_hp::load_nodes( PHCompositeNode* topNode )
   m_hitsetcontainer = findNode::getClass<TrkrHitSetContainer>(topNode, "TRKR_HITSET");
 
   // cluster map
-  m_cluster_map = findNode::getClass<TrkrClusterContainer>(topNode, "CORRECTED_TRKR_CLUSTER");
-  if( !m_cluster_map )
-  { m_cluster_map = findNode::getClass<TrkrClusterContainer>(topNode, "TRKR_CLUSTER"); }
+  m_cluster_map = findNode::getClass<TrkrClusterContainer>(topNode, "TRKR_CLUSTER");
   assert( m_cluster_map );
 
   // cluster hit association map
   m_cluster_hit_map = findNode::getClass<TrkrClusterHitAssoc>(topNode, "TRKR_CLUSTERHITASSOC");
-  // assert( m_cluster_hit_map );
+
+  // mbd
+  m_mbd = findNode::getClass<MbdOut>(topNode, "MbdOut");
+  if( !m_mbd ) { std::cout << "MicromegasClusterEvaluator_hp::load_nodes - MbdOut not found" << std::endl; }
 
   // local container
   m_container = findNode::getClass<Container>(topNode, "MicromegasClusterEvaluator_hp::Container");
@@ -180,12 +186,26 @@ int MicromegasClusterEvaluator_hp::load_nodes( PHCompositeNode* topNode )
 }
 
 //_____________________________________________________________________
+void MicromegasClusterEvaluator_hp::evaluate_mbd()
+{
+  if(!(m_mbd && m_container)) return;
+
+  if( false )
+  {
+    std::cout << "MicromegasClusterEvaluator_hp::evaluate_mbd -"
+      << " charge_south: " << m_mbd->get_q(0)
+      << " charge_north: " << m_mbd->get_q(1)
+      << std::endl;
+  }
+
+  m_container->mbd_info.charge_south = m_mbd->get_q(0);
+  m_container->mbd_info.charge_north = m_mbd->get_q(1);
+}
+
+//_____________________________________________________________________
 void MicromegasClusterEvaluator_hp::evaluate_clusters()
 {
   if(!(m_cluster_map&&m_container)) return;
-
-  // clear array
-  m_container->Reset();
 
   m_container->n_detector_clusters.resize(16,0);
   m_container->n_region_clusters.resize(64,0);

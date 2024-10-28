@@ -14,6 +14,7 @@
 #include <memory>
 
 class ActsGeometry;
+class MbdOut;
 class PHG4CylinderGeomContainer;
 class TrkrClusterHitAssoc;
 class TrkrClusterContainer;
@@ -78,6 +79,14 @@ class MicromegasClusterEvaluator_hp : public SubsysReco
     using List = std::vector<Cluster>;
   };
 
+  class MbdInfo
+  {
+    public:
+
+    double charge_south = 0;
+    double charge_north = 0;
+  };
+
   class Container: public PHObject
   {
 
@@ -115,6 +124,9 @@ class MicromegasClusterEvaluator_hp : public SubsysReco
     // number of clusters
     unsigned short n_z_clusters = 0;
 
+    // MBD information
+    MbdInfo mbd_info;
+
     ClassDef(Container,1)
 
   };
@@ -124,7 +136,10 @@ class MicromegasClusterEvaluator_hp : public SubsysReco
   /// load nodes
   int load_nodes( PHCompositeNode* );
 
-  /// evaluate hits
+  /// evaluate mbd
+  void evaluate_mbd();
+
+  /// evaluate clusters
   void evaluate_clusters();
 
   /// cluster array
@@ -141,6 +156,9 @@ class MicromegasClusterEvaluator_hp : public SubsysReco
 
   //! cluster to hit association
   TrkrClusterHitAssoc* m_cluster_hit_map = nullptr;
+
+  //! mbd information
+  MbdOut* m_mbd = nullptr;
 
   //!@name calibration filename
   //@{
