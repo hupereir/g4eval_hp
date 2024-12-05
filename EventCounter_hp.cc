@@ -6,7 +6,7 @@
 //_____________________________________________________________________
 EventCounter_hp::EventCounter_hp( const std::string& name, unsigned int granularity ):
   SubsysReco( name),
-  _granularity( granularity )
+  m_granularity( granularity )
 { std::cout << "EventCounter_hp::EventCounter_hp." << std::endl; }
 
 //_____________________________________________________________________
@@ -16,8 +16,8 @@ int EventCounter_hp::Init(PHCompositeNode*)
   std::cout << "EventCounter_hp::Init." << std::endl;
 
   // initialize timer
-  _timer.reset( new PHTimer("_eventCounter_hp_timer") );
-  _timer->restart();
+  m_timer.restart();
+  m_running_timer.restart();
 
   return Fun4AllReturnCodes::EVENT_OK;
 }
@@ -33,9 +33,15 @@ int EventCounter_hp::InitRun(PHCompositeNode* )
 int EventCounter_hp::process_event(PHCompositeNode*)
 {
   // print event number
-  if( _granularity > 0 && (_ievent % _granularity) == 0 )
-  { std::cout << "EventCounter_hp::process_event - Event = " << _ievent << std::endl; }
-  ++_ievent;
+  if( m_granularity > 0 && (m_ievent % m_granularity) == 0 )
+  {
+    std::cout << "EventCounter_hp::process_event -"
+      << " event = " << m_ievent
+      << " time (ms): " << m_running_timer.elapsed()
+      << std::endl;
+    m_running_timer.restart();
+  }
+  ++m_ievent;
 
   return Fun4AllReturnCodes::EVENT_OK;
 }
@@ -46,11 +52,11 @@ int EventCounter_hp::End(PHCompositeNode*)
   std::cout << "EventCounter_hp::End." << std::endl;
 
   // print timer information
-  _timer->stop();
+  m_timer.stop();
   std::cout
     << "EventCounter_hp::End -"
-    << " events: " << _ievent
-    << " time per event:" << _timer->get_accumulated_time()/(1000.*_ievent) << " sec"
+    << " events: " << m_ievent
+    << " time per event (ms):" << m_timer.get_accumulated_time()/m_ievent
     << std::endl;
 
   return Fun4AllReturnCodes::EVENT_OK;

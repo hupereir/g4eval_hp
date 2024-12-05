@@ -28,9 +28,10 @@ class EventCounter_hp : public SubsysReco
   private:
 
   // event counter
-  unsigned int _ievent = 0;
-  unsigned int _granularity = 100;
-  std::unique_ptr<PHTimer> _timer;
+  unsigned int m_ievent = 0;
+  unsigned int m_granularity = 100;
+  PHTimer m_timer{"_eventCounter_hp_timer"};
+  PHTimer m_running_timer{"_eventCounter_hp_running_timer"};
 
 };
 
