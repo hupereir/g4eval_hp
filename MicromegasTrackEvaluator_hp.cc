@@ -114,6 +114,40 @@ namespace
     return true;
   }
 
+  // line line intersection
+  bool line_line_intersection(
+      double m, double b,
+      double x0, double y0, double nx, double ny,
+      double& xplus, double& yplus, double& xminus, double& yminus)
+  {
+    if (ny == 0)
+    {
+      // vertical lines are defined by ny=0 and x = x0
+      xplus = xminus = x0;
+
+      // calculate y accordingly
+      yplus = yminus = m * x0 + b;
+    }
+    else
+    {
+
+      double denom = nx + ny*m;
+      if(denom == 0) {
+        return false; // lines are parallel and there is no intersection
+      }
+
+      double x = (nx*x0 + ny*y0 - ny*b)/denom;
+      double y = m*x + b;
+      // a straight line has a unique intersection point
+      xplus = xminus = x;
+      yplus = yminus = y;
+
+    }
+
+    return true;
+  }
+
+
   //* converninece trait for underlying type
   template<class T>
     using underlying_type_t = typename std::underlying_type<T>::type;
@@ -354,12 +388,31 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
     // check global positions
     if( global_positions.size()<3 ) { continue; }
 
-    // helical fit
-    const auto [R, X0, Y0] = TrackFitUtils::circle_fit_by_taubin(global_positions);
-    const auto [A, B] = TrackFitUtils::line_fit(global_positions);
-    if(R < 40.0)
+    // r,z linear fit
+    const auto [slope_rz, intersect_rz] = TrackFitUtils::line_fit(global_positions);
+
+    // circle fit parameters
+    double R = 0, X0 = 0, Y0 = 0;
+
+    // x,y straight fit paramers
+    double slope_xy = 0, intersect_xy = 0;
+
+    if( m_zero_field )
     {
-      continue;
+
+      // x,y straight fit
+      std::tie( slope_xy, intersect_xy ) = TrackFitUtils::line_fit_xy(global_positions);
+
+    } else {
+
+      // x,y circle
+      std::tie( R, X0, Y0 ) = TrackFitUtils::circle_fit_by_taubin(global_positions);
+
+      if(R < 40.0)
+      {
+        continue;
+      }
+
     }
 
     // look over micromegas layers
@@ -374,7 +427,10 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
       const auto layer_radius = layergeom->get_radius();
 
       // get intersection to track
-      auto [xplus, yplus, xminus, yminus] = TrackFitUtils::circle_circle_intersection(layer_radius, R, X0, Y0);
+      auto [xplus, yplus, xminus, yminus] =
+        m_zero_field ?
+        TrackFitUtils::line_circle_intersection(layer_radius, slope_xy, intersect_xy):
+        TrackFitUtils::circle_circle_intersection(layer_radius, R, X0, Y0);
 
       // finds the intersection of the fitted circle with the micromegas layer
       if(!std::isfinite(xplus))
@@ -389,7 +445,7 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
 
       // calculate
       double r = layer_radius;
-      double z = B + A * r;
+      double z = intersect_rz + slope_rz * r;
 
       // select the angle that is the closest to last cluster
       // store phi, apply coarse space charge corrections in calibration mode
@@ -417,10 +473,18 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
       const double nx = tile_norm.x();
       const double ny = tile_norm.y();
 
-      // calculate intersection to tile
-      if (!circle_line_intersection(R, X0, Y0, x0, y0, nx, ny, xplus, yplus, xminus, yminus))
+      // calculate intersection to tile, now defined as a straight line
+      if( m_zero_field )
       {
-        continue;
+
+        if (!line_line_intersection(slope_xy, intersect_xy, x0, y0, nx, ny, xplus, yplus, xminus, yminus))
+        { continue; }
+
+      } else {
+
+        if (!circle_line_intersection(R, X0, Y0, x0, y0, nx, ny, xplus, yplus, xminus, yminus))
+        { continue; }
+
       }
 
       // select again angle closest to last cluster
@@ -432,7 +496,7 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
       const double x = (is_plus ? xplus : xminus);
       const double y = (is_plus ? yplus : yminus);
       r = get_r(x, y);
-      z = B + A * r;
+      z = intersect_rz + slope_rz * r;
 
       // create state
       TrackStateStruct trk_state;

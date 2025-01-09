@@ -40,6 +40,10 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
   /// end of processing
   virtual int End(PHCompositeNode*);
 
+  /// zero field
+  void set_zero_field( bool value )
+  { m_zero_field = value; }
+
   /// set default pedestal
   void set_default_pedestal( double value )
   { m_default_pedestal = value; }
@@ -242,6 +246,9 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
 
   //! tracks
   SvtxTrackMap* m_track_map = nullptr;
+
+  //! zero field flag
+  bool m_zero_field = false;
 
   //!@name calibration filename
   //@{
