@@ -40,6 +40,16 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
   /// end of processing
   virtual int End(PHCompositeNode*);
 
+  /// use silidon only for the extrapolation
+  void set_use_silicon( bool value )
+  { m_use_silicon = value; }
+
+  void set_min_tpc_layer( int value )
+  { m_min_tpc_layer = value; }
+
+  void set_max_tpc_layer( int value )
+  { m_max_tpc_layer = value; }
+
   /// zero field
   void set_zero_field( bool value )
   { m_zero_field = value; }
@@ -247,6 +257,9 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
   //! tracks
   SvtxTrackMap* m_track_map = nullptr;
 
+  //! use silicon only for the extrapolation
+  bool m_use_silicon = false;
+
   //! zero field flag
   bool m_zero_field = false;
 
@@ -268,7 +281,10 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
   //@}
 
   // range of TPC layers to use in projection to micromegas
-  unsigned int _min_tpc_layer = 38;
+  unsigned int m_min_tpc_layer = 39;
+
+  // range of TPC layers to use in projection to micromegas
+  unsigned int m_max_tpc_layer = 55;
 
 };
 

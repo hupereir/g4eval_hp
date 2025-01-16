@@ -247,6 +247,11 @@ int MicromegasTrackEvaluator_hp::Init(PHCompositeNode* topNode )
     << (m_calibration_filename.empty() ? "unspecified":m_calibration_filename )
     << std::endl;
 
+  std::cout << "MicromegasTrackEvaluator_hp::Init - m_use_silicon: " << m_use_silicon << std::endl;
+  std::cout << "MicromegasTrackEvaluator_hp::Init - m_zero_field: " << m_zero_field << std::endl;
+  std::cout << "MicromegasTrackEvaluator_hp::Init - m_min_tpc_layer: " << m_min_tpc_layer << std::endl;
+  std::cout << "MicromegasTrackEvaluator_hp::Init - m_max_tpc_layer: " << m_max_tpc_layer << std::endl;
+
   // read calibrations
   if( !m_calibration_filename.empty() )
   { m_calibration_data.read( m_calibration_filename ); }
@@ -278,8 +283,10 @@ int MicromegasTrackEvaluator_hp::Init(PHCompositeNode* topNode )
 }
 
 //_____________________________________________________________________
-int MicromegasTrackEvaluator_hp::InitRun(PHCompositeNode* /*topnode*/ )
+int MicromegasTrackEvaluator_hp::InitRun(PHCompositeNode* topnode )
 {
+  std::cout << "MicromegasTrackEvaluator_hp::InitRun" << std::endl;
+  load_nodes(topnode);
   return Fun4AllReturnCodes::EVENT_OK;
 }
 
@@ -355,6 +362,8 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
     track_struct._crossing = crossing;
 
     std::vector<Acts::Vector3> global_positions;
+    std::vector<Acts::Vector3> global_positions_silicon;
+    std::vector<Acts::Vector3> global_positions_mvtx;
 
     // try extrapolate track to Micromegas and find corresponding tile
     /* this is all copied from PHMicromegasTpcTrackMatching */
@@ -363,33 +372,74 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
     {
       // detector type
       const auto detid = TrkrDefs::getTrkrId(cluster_key);
-
-      if( detid == TrkrDefs::micromegasId )
+      switch( detid )
       {
-        const unsigned int layer = TrkrDefs::getLayer(cluster_key);
-        const auto cluster = m_cluster_map->findCluster(cluster_key);
-        if( layer == 55 ) track_struct._found_cluster_phi = create_cluster(cluster_key,cluster);
-        if( layer == 56 ) track_struct._found_cluster_z = create_cluster(cluster_key,cluster);
+        case TrkrDefs::micromegasId:
+        {
+          const unsigned int layer = TrkrDefs::getLayer(cluster_key);
+          const auto cluster = m_cluster_map->findCluster(cluster_key);
+          if( layer == 55 ) track_struct._found_cluster_phi = create_cluster(cluster_key,cluster);
+          if( layer == 56 ) track_struct._found_cluster_z = create_cluster(cluster_key,cluster);
+          break;
+        }
 
-      } else if( detid == TrkrDefs::tpcId ) {
+        case TrkrDefs::tpcId:
+        {
+          // layer
+          const unsigned int layer = TrkrDefs::getLayer(cluster_key);
 
-        // layer
-        const unsigned int layer = TrkrDefs::getLayer(cluster_key);
-        if (layer < _min_tpc_layer) continue;
+          // check layer range
+          if(!( layer >= m_min_tpc_layer && layer < m_max_tpc_layer) ) continue;
 
-        // get matching
-        const auto cluster = m_cluster_map->findCluster(cluster_key);
-        const auto global_position = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(cluster_key, cluster, crossing);
-        global_positions.push_back( global_position );
+          // get matching
+          const auto cluster = m_cluster_map->findCluster(cluster_key);
+          const auto global_position = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(cluster_key, cluster, crossing);
+          global_positions.push_back( global_position );
+          break;
+        }
+
+        case TrkrDefs::mvtxId:
+        {
+          // get matching
+          const auto cluster = m_cluster_map->findCluster(cluster_key);
+          const auto global_position = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(cluster_key, cluster, crossing);
+          global_positions_silicon.push_back( global_position );
+          global_positions_mvtx.push_back( global_position );
+          break;
+        }
+
+        case TrkrDefs::inttId:
+        {
+          // get matching
+          const auto cluster = m_cluster_map->findCluster(cluster_key);
+          const auto global_position = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(cluster_key, cluster, crossing);
+          global_positions_silicon.push_back( global_position );
+          break;
+        }
       }
-
     }
 
     // check global positions
-    if( global_positions.size()<3 ) { continue; }
+    if( m_use_silicon )
+    {
+
+      if( global_positions_mvtx.size()<3 ) { continue; }
+
+    } else {
+
+      if( global_positions.size()<3 ) { continue; }
+
+    }
 
     // r,z linear fit
-    const auto [slope_rz, intersect_rz] = TrackFitUtils::line_fit(global_positions);
+    const auto [slope_rz, intersect_rz] = m_use_silicon ?
+      TrackFitUtils::line_fit(global_positions_mvtx):
+      TrackFitUtils::line_fit(global_positions);
+
+//     std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks -"
+//       << " slope_rz: " << slope_rz
+//       << " intersect_rz: " << intersect_rz
+//       << std::endl;
 
     // circle fit parameters
     double R = 0, X0 = 0, Y0 = 0;
@@ -401,12 +451,21 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
     {
 
       // x,y straight fit
-      std::tie( slope_xy, intersect_xy ) = TrackFitUtils::line_fit_xy(global_positions);
+      std::tie( slope_xy, intersect_xy ) = m_use_silicon ?
+        TrackFitUtils::line_fit_xy(global_positions_silicon):
+        TrackFitUtils::line_fit_xy(global_positions);
+
+//       std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks -"
+//         << " slope_xy: " << slope_xy
+//         << " intersect_xy: " << intersect_xy
+//         << std::endl;
 
     } else {
 
       // x,y circle
-      std::tie( R, X0, Y0 ) = TrackFitUtils::circle_fit_by_taubin(global_positions);
+      std::tie( R, X0, Y0 ) = m_use_silicon ?
+        TrackFitUtils::circle_fit_by_taubin(global_positions_silicon):
+        TrackFitUtils::circle_fit_by_taubin(global_positions);
 
       if(R < 40.0)
       {
@@ -432,6 +491,11 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
         TrackFitUtils::line_circle_intersection(layer_radius, slope_xy, intersect_xy):
         TrackFitUtils::circle_circle_intersection(layer_radius, R, X0, Y0);
 
+//       std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks -"
+//         << " xplus: " << xplus
+//         << " yplus: " << yplus
+//         << std::endl;
+
       // finds the intersection of the fitted circle with the micromegas layer
       if(!std::isfinite(xplus))
       {
@@ -439,7 +503,9 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
       }
 
       // we can figure out which solution is correct based on the last cluster position in the TPC
-      const double last_clus_phi = std::atan2(global_positions.back().y(), global_positions.back().x());
+      const double last_clus_phi = m_use_silicon ?
+        std::atan2(global_positions_silicon.back().y(), global_positions_silicon.back().x()):
+        std::atan2(global_positions.back().y(), global_positions.back().x());
       double phi_plus = std::atan2(yplus, xplus);
       double phi_minus = std::atan2(yminus, xminus);
 
@@ -510,6 +576,10 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
       const auto local_intersection_planar = layergeom->get_local_from_world_coords(tileid, m_tGeometry, {x,y,z});
       trk_state._x_local = local_intersection_planar.x();
       trk_state._y_local = local_intersection_planar.y();
+
+//       std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks -"
+//         << " local_intersection_planar: " << local_intersection_planar.x() << ", " << local_intersection_planar.y()
+//         << std::endl;
 
       // store in track
       const auto segmentation_type = layergeom->get_segmentation_type();
@@ -626,4 +696,3 @@ MicromegasTrackEvaluator_hp::ClusterStruct MicromegasTrackEvaluator_hp::create_c
   return cluster_struct;
 
 }
-
