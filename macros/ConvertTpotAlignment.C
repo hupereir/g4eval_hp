@@ -116,7 +116,7 @@ void ConvertTpotAlignment()
 
   rc->set_IntFlag("RUNNUMBER", runnumber);
   rc->set_IntFlag("RUNSEGMENT", 0);
-  rc->set_StringFlag("CDB_GLOBALTAG", "2024p008");
+  rc->set_StringFlag("CDB_GLOBALTAG", "ProdA_2024");
   rc->set_uint64Flag("TIMESTAMP", runnumber);
 
   // load geometry file

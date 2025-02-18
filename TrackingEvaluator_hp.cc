@@ -503,8 +503,19 @@ int TrackingEvaluator_hp::Init(PHCompositeNode* topNode )
 }
 
 //_____________________________________________________________________
-int TrackingEvaluator_hp::InitRun(PHCompositeNode* )
-{ return Fun4AllReturnCodes::EVENT_OK; }
+int TrackingEvaluator_hp::InitRun(PHCompositeNode* topNode)
+{
+
+  // TPC geometry (to check ADC clock frequency)
+  {
+    auto geom = findNode::getClass<PHG4TpcCylinderGeomContainer>(topNode, "CYLINDERCELLGEOM_SVTX");
+    assert(geom);
+    const auto AdcClockPeriod = geom->GetFirstLayerCellGeom()->get_zstep();
+    std::cout << "TrackingEvaluator_hp::Init - AdcClockPeriod: " << AdcClockPeriod << std::endl;
+  }
+
+  return Fun4AllReturnCodes::EVENT_OK;
+}
 
 //_____________________________________________________________________
 int TrackingEvaluator_hp::process_event(PHCompositeNode* topNode)

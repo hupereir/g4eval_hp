@@ -260,7 +260,7 @@ class TrackingEvaluator_hp : public SubsysReco
     unsigned int _nclusters = 0;
 
     /// crossing
-    unsigned int _crossing = 0;
+    short int _crossing = 0;
 
     /// mask of layers for which there is a cluster in the track
     int64_t _mask = 0LL;
