@@ -220,6 +220,27 @@ class TrackingEvaluator_hp : public SubsysReco
 
   };
 
+  // cluster information to be stored in tree
+  class CaloClusterStruct
+  {
+    public:
+
+    using List = std::vector<CaloClusterStruct>;
+
+    //! cluster layer
+    SvtxTrack::CAL_LAYER _layer = SvtxTrack::PRES;
+
+    //! number of hits belonging to the cluster
+    unsigned int _size = 0;
+
+    //!@name cluster position and energy
+    //@{
+    float _x = 0;
+    float _y = 0;
+    float _z = 0;
+    float _energy = 0;
+    //@}
+  };
 
   // cluster information to be stored in tree
   class CMClusterStruct
@@ -321,6 +342,9 @@ class TrackingEvaluator_hp : public SubsysReco
     // associate clusters
     ClusterStruct::List _clusters;
 
+    // associate calorimater clusters
+    CaloClusterStruct::List _calo_clusters;
+
   };
 
 
@@ -407,6 +431,9 @@ class TrackingEvaluator_hp : public SubsysReco
     const ClusterStruct::List& clusters() const
     { return _clusters; }
 
+    const CaloClusterStruct::List& calo_clusters() const
+    { return _calo_clusters; }
+
     const CMClusterStruct::List& cm_clusters() const
     { return _cm_clusters; }
 
@@ -427,6 +454,9 @@ class TrackingEvaluator_hp : public SubsysReco
     void addCluster( const ClusterStruct& cluster )
     { _clusters.push_back( cluster ); }
 
+    void addCaloCluster( const CaloClusterStruct& cluster )
+    { _calo_clusters.push_back( cluster ); }
+
     void addCMCluster( const CMClusterStruct& cluster )
     { _cm_clusters.push_back( cluster ); }
 
@@ -441,6 +471,9 @@ class TrackingEvaluator_hp : public SubsysReco
 
     void clearClusters()
     { _clusters.clear(); }
+
+    void clearCaloClusters()
+    { _calo_clusters.clear(); }
 
     void clearCMClusters()
     { _cm_clusters.clear(); }
@@ -461,6 +494,9 @@ class TrackingEvaluator_hp : public SubsysReco
     //! clusters array
     ClusterStruct::List _clusters;
 
+    //! calo clusters array
+    CaloClusterStruct::List _calo_clusters;
+
     //! central membrane clustsrs
     CMClusterStruct::List _cm_clusters;
 
@@ -474,16 +510,18 @@ class TrackingEvaluator_hp : public SubsysReco
 
   };
 
+  // selection flags
   enum Flags
   {
     EvalEvent = 1<<0,
     EvalClusters = 1<<1,
-    EvalCMClusters = 1<<6,
     EvalTracks = 1<<2,
     EvalTrackPairs = 1<<3,
     PrintClusters = 1<<4,
     PrintTracks = 1<<5,
-    MicromegasOnly = 1<<6
+    MicromegasOnly = 1<<7,
+    EvalCMClusters = 1<<8,
+    EvalCaloClusters = 1<<9
   };
 
   //! set flags. Should be a bitwise or of Flags enum
@@ -534,6 +572,9 @@ class TrackingEvaluator_hp : public SubsysReco
 
   //! evaluate clusters
   void evaluate_clusters();
+
+  //! evaluate clusters
+  void evaluate_calo_clusters(PHCompositeNode*);
 
   //! evaluate cm clusters
   void evaluate_cm_clusters();

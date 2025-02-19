@@ -1,5 +1,7 @@
 #include "TrackingEvaluator_hp.h"
 
+#include <calobase/RawClusterContainer.h>
+
 #include <ffarawobjects/Gl1RawHit.h>
 #include <ffarawobjects/MicromegasRawHit.h>
 #include <ffarawobjects/MicromegasRawHitContainer.h>
@@ -74,6 +76,17 @@ namespace
 
   //! eta
   template<class T> T get_eta( T p, T pz ) { return std::log( (p+pz)/(p-pz) )/2; }
+
+  //! map calorimeter names to layer type
+  using calo_names_map_t = std::map<SvtxTrack::CAL_LAYER, std::string>;
+  const calo_names_map_t m_calo_names = {
+    { SvtxTrack::CEMC, "CEMC" },
+    { SvtxTrack::HCALIN, "HCALIN" },
+    { SvtxTrack::HCALOUT, "HCALOUT" },
+    { SvtxTrack::OUTER_CEMC, "OUTER_CEMC" },
+    { SvtxTrack::OUTER_HCALIN, "OUTER_HCALIN" },
+    { SvtxTrack::OUTER_HCALOUT, "OUTER_HCALOUT" }
+  };
 
   //! needed for weighted linear interpolation
   struct interpolation_data_t
@@ -463,6 +476,7 @@ void TrackingEvaluator_hp::Container::Reset()
 {
   _events.clear();
   _clusters.clear();
+  _calo_clusters.clear();
   _cm_clusters.clear();
   _tracks.clear();
   _track_pairs.clear();
@@ -531,6 +545,7 @@ int TrackingEvaluator_hp::process_event(PHCompositeNode* topNode)
   if(m_flags&PrintTracks) print_tracks();
   if(m_flags&EvalEvent) evaluate_event();
   if(m_flags&EvalClusters) evaluate_clusters();
+  if(m_flags&EvalCaloClusters) evaluate_calo_clusters(topNode);
   if(m_flags&EvalCMClusters) evaluate_cm_clusters();
   if(m_flags&EvalTracks)
   {
@@ -751,6 +766,27 @@ void TrackingEvaluator_hp::evaluate_clusters()
       m_container->addCluster( cluster_struct );
     }
   }
+}
+
+//_____________________________________________________________________
+void TrackingEvaluator_hp::evaluate_calo_clusters(PHCompositeNode* topNode)
+{
+  if(!m_container) return;
+  m_container->clearCaloClusters();
+
+  // loop over calo types
+  for(const auto& [calo_layer, calo_name]:m_calo_names)
+  {
+//     // get nodes
+//     const std::string towerGeoNodeName = "TOWERGEOM_" + calo_name;
+//     const std::string towerNodeName = "TOWERINFO_CALIB_" + calo_name;
+
+    const std::string clusterNodeName = "CLUSTER_" + calo_name;
+    auto clusterContainer = findNode::getClass<RawClusterContainer>(topNode, clusterNodeName.c_str());
+    if( clusterContainer )
+    { std::cout << "TrackingEvaluator_hp::evaluate_calo_clusters - found " << clusterNodeName << std::endl; }
+  }
+
 }
 
 //_____________________________________________________________________
