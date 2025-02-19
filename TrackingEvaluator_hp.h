@@ -21,6 +21,7 @@ class PHG4HitContainer;
 class PHG4Particle;
 class PHG4TpcCylinderGeomContainer;
 class PHG4TruthInfoContainer;
+class RawClusterContainer;
 class SvtxTrack;
 class SvtxTrackMap;
 class SvtxTrackState;
@@ -220,6 +221,18 @@ class TrackingEvaluator_hp : public SubsysReco
 
   };
 
+  // tower information
+  class TowerStruct
+  {
+    public:
+
+    using List = std::vector<TowerStruct>;
+
+    int _phi_bin;
+    int _eta_bin;
+    float _e;
+  };
+
   // cluster information to be stored in tree
   class CaloClusterStruct
   {
@@ -238,8 +251,23 @@ class TrackingEvaluator_hp : public SubsysReco
     float _x = 0;
     float _y = 0;
     float _z = 0;
-    float _energy = 0;
+    float _r = 0;
+    float _phi = 0;
+    float _e = 0;
     //@}
+
+    //!@name matching track position
+    //@{
+    float _trk_x = 0;
+    float _trk_y = 0;
+    float _trk_z = 0;
+    float _trk_r = 0;
+    float _trk_phi = 0;
+    //@}
+
+    //! towers
+    TowerStruct::List _towers;
+
   };
 
   // cluster information to be stored in tree
@@ -574,7 +602,7 @@ class TrackingEvaluator_hp : public SubsysReco
   void evaluate_clusters();
 
   //! evaluate clusters
-  void evaluate_calo_clusters(PHCompositeNode*);
+  void evaluate_calo_clusters();
 
   //! evaluate cm clusters
   void evaluate_cm_clusters();
@@ -671,6 +699,10 @@ class TrackingEvaluator_hp : public SubsysReco
 
   //! tracks
   SvtxTrackMap* m_track_map = nullptr;
+
+  //! calorimeter cluster maps
+  using calo_clusters_map_t = std::map<SvtxTrack::CAL_LAYER, RawClusterContainer*>;
+  calo_clusters_map_t m_rawclustercontainermap;
 
   //!@name geant4 hits
   //@{

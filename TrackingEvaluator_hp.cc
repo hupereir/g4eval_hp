@@ -1,6 +1,7 @@
 #include "TrackingEvaluator_hp.h"
 
 #include <calobase/RawClusterContainer.h>
+#include <calobase/RawCluster.h>
 
 #include <ffarawobjects/Gl1RawHit.h>
 #include <ffarawobjects/MicromegasRawHit.h>
@@ -254,7 +255,6 @@ namespace
   template<class T>
     void fill_track_struct( T& trackStruct, SvtxTrack* track )
   {
-
     trackStruct._charge = track->get_charge();
     trackStruct._nclusters = track->size_cluster_keys();
     trackStruct._mask = get_mask( track );
@@ -272,6 +272,23 @@ namespace
     trackStruct._p = get_p( trackStruct._px, trackStruct._py, trackStruct._pz );
     trackStruct._pt = get_pt( trackStruct._px, trackStruct._py );
     trackStruct._eta = get_eta( trackStruct._p, trackStruct._pz );
+  }
+
+  //! create central membrane cluster struct
+  TrackingEvaluator_hp::CaloClusterStruct create_calo_cluster( SvtxTrack::CAL_LAYER layer, RawCluster* cluster )
+  {
+    TrackingEvaluator_hp::CaloClusterStruct calo_cluster_struct;
+    calo_cluster_struct._layer = layer;
+    calo_cluster_struct._size = cluster->getNTowers();
+    calo_cluster_struct._x = cluster->get_x();
+    calo_cluster_struct._y = cluster->get_y();
+    calo_cluster_struct._z = cluster->get_z();
+
+    calo_cluster_struct._r = get_r( calo_cluster_struct._x, calo_cluster_struct._y );
+    calo_cluster_struct._phi = std::atan2( calo_cluster_struct._y, calo_cluster_struct._x );
+
+    calo_cluster_struct._e = cluster->get_energy();
+    return calo_cluster_struct;
   }
 
   //! create central membrane cluster struct
@@ -545,7 +562,7 @@ int TrackingEvaluator_hp::process_event(PHCompositeNode* topNode)
   if(m_flags&PrintTracks) print_tracks();
   if(m_flags&EvalEvent) evaluate_event();
   if(m_flags&EvalClusters) evaluate_clusters();
-  if(m_flags&EvalCaloClusters) evaluate_calo_clusters(topNode);
+  if(m_flags&EvalCaloClusters) evaluate_calo_clusters();
   if(m_flags&EvalCMClusters) evaluate_cm_clusters();
   if(m_flags&EvalTracks)
   {
@@ -619,6 +636,16 @@ int TrackingEvaluator_hp::load_nodes( PHCompositeNode* topNode )
 
   // tpc distortion corrections
   m_globalPositionWrapper.loadNodes(topNode);
+
+  // load calocluster containers
+  m_rawclustercontainermap.clear();
+  for(const auto& [calo_layer, calo_name]:m_calo_names)
+  {
+    const std::string clusterNodeName = "CLUSTER_" + calo_name;
+    auto clusterContainer = findNode::getClass<RawClusterContainer>(topNode, clusterNodeName.c_str());
+    if( clusterContainer )
+    { m_rawclustercontainermap.emplace( calo_layer, clusterContainer ); }
+  }
 
   return Fun4AllReturnCodes::EVENT_OK;
 
@@ -769,24 +796,22 @@ void TrackingEvaluator_hp::evaluate_clusters()
 }
 
 //_____________________________________________________________________
-void TrackingEvaluator_hp::evaluate_calo_clusters(PHCompositeNode* topNode)
+void TrackingEvaluator_hp::evaluate_calo_clusters()
 {
   if(!m_container) return;
   m_container->clearCaloClusters();
 
   // loop over calo types
-  for(const auto& [calo_layer, calo_name]:m_calo_names)
+  for(const auto& [calo_layer, clusterContainer]:m_rawclustercontainermap)
   {
-//     // get nodes
-//     const std::string towerGeoNodeName = "TOWERGEOM_" + calo_name;
-//     const std::string towerNodeName = "TOWERINFO_CALIB_" + calo_name;
+    const auto& calo_name = m_calo_names.at(calo_layer);
+    const auto clusters = clusterContainer->getClustersMap();
+    std::cout << "TrackingEvaluator_hp::evaluate_calo_clusters - " << calo_name << " map size: " << clusters.size() << std::endl;
 
-    const std::string clusterNodeName = "CLUSTER_" + calo_name;
-    auto clusterContainer = findNode::getClass<RawClusterContainer>(topNode, clusterNodeName.c_str());
-    if( clusterContainer )
-    { std::cout << "TrackingEvaluator_hp::evaluate_calo_clusters - found " << clusterNodeName << std::endl; }
+    for( const auto& [key,calo_cluster]:clusters )
+    { m_container->addCaloCluster( create_calo_cluster( calo_layer, calo_cluster ) ); }
+
   }
-
 }
 
 //_____________________________________________________________________
@@ -803,7 +828,6 @@ void TrackingEvaluator_hp::evaluate_cm_clusters()
     auto cluster_struct = create_cm_cluster( key, cluster );
     m_container->addCMCluster( cluster_struct );
   }
-
 }
 
 //_____________________________________________________________________
@@ -857,10 +881,6 @@ void TrackingEvaluator_hp::evaluate_tracks()
 
     // save
     track_struct._crossing = crossing;
-//     std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
-//       << " track id: " << track_id
-//       << " crossing: " << crossing
-//       << std::endl;
 
     // loop over clusters
     for( const auto& cluster_key:get_cluster_keys( track ) )
@@ -879,12 +899,6 @@ void TrackingEvaluator_hp::evaluate_tracks()
       auto cluster_struct = create_cluster( cluster_key, cluster, crossing );
       add_cluster_size( cluster_struct, cluster_key, m_cluster_hit_map );
       add_cluster_energy( cluster_struct, cluster_key, m_cluster_hit_map, m_hitsetcontainer );
-
-//       std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
-//         << " track id: " << track_id
-//         << " layer: " << (int) TrkrDefs::getLayer(cluster_key)
-//         << " position: " << cluster_struct._x << ", " << cluster_struct._y << ", " << cluster_struct._z
-//         << std::endl;
 
       // truth information
       const auto g4hits = find_g4hits( cluster_key );
@@ -979,6 +993,15 @@ void TrackingEvaluator_hp::evaluate_tracks()
 
       // add to track
       track_struct._clusters.push_back( cluster_struct );
+    }
+
+    // add matching calorimeter clusters
+    if(m_flags&EvalCaloClusters)
+    {
+      // loop over calorimeter layers
+
+
+
     }
 
     if(track_struct._nclusters_micromegas>0 || !(m_flags&MicromegasOnly))
