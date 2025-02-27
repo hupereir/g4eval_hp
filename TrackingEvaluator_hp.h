@@ -228,9 +228,9 @@ class TrackingEvaluator_hp : public SubsysReco
 
     using List = std::vector<TowerStruct>;
 
-    int _phi_bin;
-    int _eta_bin;
-    float _e;
+    int _ieta = 0;
+    int _iphi = 0;
+    float _e = 0;
   };
 
   // cluster information to be stored in tree
@@ -241,7 +241,7 @@ class TrackingEvaluator_hp : public SubsysReco
     using List = std::vector<CaloClusterStruct>;
 
     //! cluster layer
-    SvtxTrack::CAL_LAYER _layer = SvtxTrack::PRES;
+    int _layer = SvtxTrack::PRES;
 
     //! number of hits belonging to the cluster
     unsigned int _size = 0;
@@ -263,6 +263,7 @@ class TrackingEvaluator_hp : public SubsysReco
     float _trk_z = 0;
     float _trk_r = 0;
     float _trk_phi = 0;
+    float _trk_dr = 0;
     //@}
 
     //! towers
@@ -560,6 +561,10 @@ class TrackingEvaluator_hp : public SubsysReco
   void set_trackmapname( const std::string& value )
   { m_trackmapname = value; }
 
+  //! calorimeter min enery
+  void set_calo_min_energy( int layer, double value )
+  { m_calo_min_energy[layer] = value; }
+
   //! utility functions
   static bool has_layer( int64_t mask, int layer )
   { return mask & (1LL<<layer); }
@@ -701,8 +706,12 @@ class TrackingEvaluator_hp : public SubsysReco
   SvtxTrackMap* m_track_map = nullptr;
 
   //! calorimeter cluster maps
-  using calo_clusters_map_t = std::map<SvtxTrack::CAL_LAYER, RawClusterContainer*>;
+  using calo_clusters_map_t = std::map<int, RawClusterContainer*>;
   calo_clusters_map_t m_rawclustercontainermap;
+
+  //! calorimeter min energy cut
+  using calo_min_energy_map_t = std::map<int, float>;
+  calo_min_energy_map_t m_calo_min_energy;
 
   //!@name geant4 hits
   //@{
