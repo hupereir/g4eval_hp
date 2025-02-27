@@ -268,7 +268,6 @@ class TrackingEvaluator_hp : public SubsysReco
 
     //! towers
     TowerStruct::List _towers;
-
   };
 
   // cluster information to be stored in tree

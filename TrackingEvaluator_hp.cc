@@ -1045,14 +1045,14 @@ void TrackingEvaluator_hp::evaluate_tracks()
           if( cluster->get_energy() < min_energy ) continue;
 
           // cluster r
-          const auto radius = get_r(cluster->get_x(),cluster->get_y());
+          const auto cluster_r = get_r(cluster->get_x(),cluster->get_y());
 
           // find matching state vector
           float dr_min = -1;
           auto state_iter = track->begin_states();
           for( auto iter = state_iter; iter != track->end_states(); ++iter )
           {
-            const auto dr = std::abs( radius - get_r( iter->second->get_x(), iter->second->get_y() ) );
+            const auto dr = std::abs( cluster_r - get_r( iter->second->get_x(), iter->second->get_y() ) );
             if( dr_min < 0 || dr < dr_min )
             {
               state_iter = iter;
@@ -1067,18 +1067,33 @@ void TrackingEvaluator_hp::evaluate_tracks()
 
           // calculate distance between track state and cluster
           const auto& state = state_iter->second;
-          const double d = square(state->get_x() - cluster->get_x()) + square(state->get_y() - cluster->get_y()) + square(state->get_z() - cluster->get_z());
+
+          // extrapolate track state to same r as cluster and calculate distance
+          // need to extrapolate to the right r
+          const auto trk_r = get_r( state->get_x(), state->get_y() );
+          const auto dr = cluster_r - trk_r;
+
+          const auto trk_drdt = (state->get_x()*state->get_px() + state->get_y()*state->get_py())/trk_r;
+          const auto trk_dxdr = state->get_px()/trk_drdt;
+          const auto trk_dydr = state->get_py()/trk_drdt;
+          const auto trk_dzdr = state->get_pz()/trk_drdt;
+
+          const auto trk_x = state->get_x() + dr*trk_dxdr;
+          const auto trk_y = state->get_y() + dr*trk_dydr;
+          const auto trk_z = state->get_z() + dr*trk_dzdr;
+
+          const double d = square(trk_x - cluster->get_x()) + square(trk_y - cluster->get_y()) + square(trk_z- cluster->get_z());
           if( dmin < 0 || d < dmin )
           {
             dmin = d;
             calo_cluster_struct = create_calo_cluster(calo_layer, cluster);
 
             // add track information
-            calo_cluster_struct._trk_x = state->get_x();
-            calo_cluster_struct._trk_y = state->get_y();
-            calo_cluster_struct._trk_z = state->get_z();
-            calo_cluster_struct._trk_r = get_r( calo_cluster_struct._trk_x, calo_cluster_struct._trk_y );
-            calo_cluster_struct._trk_phi = std::atan2( calo_cluster_struct._trk_y, calo_cluster_struct._trk_x );
+            calo_cluster_struct._trk_x = trk_x;
+            calo_cluster_struct._trk_y = trk_y;
+            calo_cluster_struct._trk_z = trk_z;
+            calo_cluster_struct._trk_r = get_r( trk_x, trk_y );
+            calo_cluster_struct._trk_phi = std::atan2( trk_y, trk_x );
             calo_cluster_struct._trk_dr = dr_min;
           }
         }
@@ -1086,7 +1101,7 @@ void TrackingEvaluator_hp::evaluate_tracks()
         if( dmin >= 0 )
         {
 
-          // std::cout << "TrackingEvaluator_hp::evaluate_tracks - calo_layer: " << calo_layer << " dmin: " << dmin << std::endl;
+          std::cout << "TrackingEvaluator_hp::evaluate_tracks - calo_layer: " << calo_layer << " dmin: " << dmin << std::endl;
 
           // store calo cluster
           track_struct._calo_clusters.push_back( calo_cluster_struct );
