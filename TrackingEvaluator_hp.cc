@@ -527,9 +527,6 @@ TrackingEvaluator_hp::TrackingEvaluator_hp( const std::string& name ):
     {SvtxTrack::CEMC, 0.15},
     {SvtxTrack::HCALIN, 0},
     {SvtxTrack::HCALOUT, 0},
-    {SvtxTrack::OUTER_CEMC, 0},
-    {SvtxTrack::OUTER_HCALIN, 0},
-    {SvtxTrack::OUTER_HCALOUT, 0},
     {TOPO_HCAL, 0}
   })
 {}
@@ -1031,9 +1028,6 @@ void TrackingEvaluator_hp::evaluate_tracks()
       {
         // cut on cluster energy
         const auto min_energy = m_calo_min_energy[calo_layer];
-
-//         // only EMCAL for now.
-//         if( calo_layer != SvtxTrack::CEMC ) continue;
 
         // calo cluster struct
         TrackingEvaluator_hp::CaloClusterStruct calo_cluster_struct;
