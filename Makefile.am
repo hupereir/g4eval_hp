@@ -30,6 +30,7 @@ libg4eval_hp_la_LIBADD = \
   -ltpc \
   -ltpc_io \
   -ltrackbase_historic_io \
+  -ltrackbase_historic \
   -ltrack_io \
   -lgsl \
   -lgslcblas
