@@ -25,6 +25,7 @@ class RawClusterContainer;
 class SvtxTrack;
 class SvtxTrackMap;
 class SvtxTrackState;
+class TrackSeed;
 class TrkrCluster;
 class TrkrClusterContainer;
 class TrkrClusterHitAssoc;
@@ -350,6 +351,9 @@ class TrackingEvaluator_hp : public SubsysReco
     float _eta = 0;
     //@}
 
+    //! dedx in TPC using cluster information only
+    float _dedx = 0;
+
     //!@name truth momentum
     //@{
     int _pid = 0;
@@ -365,6 +369,10 @@ class TrackingEvaluator_hp : public SubsysReco
     float _truth_pt = 0;
     float _truth_p = 0;
     float _truth_eta = 0;
+
+    // dedx in TPC using truth information (not sure how to calculate)
+    float _truth_dedx = 0;
+
     //@}
 
     // associate clusters
@@ -448,7 +456,7 @@ class TrackingEvaluator_hp : public SubsysReco
     Container& operator = ( const Container& ) = delete;
 
     //! reset
-    virtual void Reset();
+    void Reset() override;
 
     //!@name accessors
     //@{
@@ -534,7 +542,7 @@ class TrackingEvaluator_hp : public SubsysReco
     //! track pairs array
     TrackPairStruct::List _track_pairs;
 
-    ClassDef(Container,1)
+    ClassDefOverride(Container,1)
 
   };
 
@@ -664,6 +672,9 @@ class TrackingEvaluator_hp : public SubsysReco
 
   //! fill MC track map
   void fill_g4particle_map();
+
+  //! calculate dedx from clusters only
+  float get_dedx( TrackSeed* ) const;
 
   //! evaluation node
   Container* m_container = nullptr;

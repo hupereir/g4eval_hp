@@ -223,6 +223,16 @@ namespace
     return swx/sw;
   }
 
+  //! get cluster keys from a given seed
+  std::vector<TrkrDefs::cluskey> get_cluster_keys( TrackSeed* seed )
+  {
+    std::vector<TrkrDefs::cluskey> out;
+    if( seed )
+    { std::copy( seed->begin_cluster_keys(), seed->end_cluster_keys(), std::back_inserter( out ) ); }
+
+    return out;
+  }
+
   //! get cluster keys from a given track
   std::vector<TrkrDefs::cluskey> get_cluster_keys( SvtxTrack* track )
   {
@@ -605,6 +615,62 @@ int TrackingEvaluator_hp::process_event(PHCompositeNode* topNode)
 }
 
 //_____________________________________________________________________
+float TrackingEvaluator_hp::get_dedx( TrackSeed* seed ) const
+{
+  if( !(seed && m_cluster_map && m_tpc_geom_container))
+  { return 0; }
+
+  // get clusters associated to track
+  std::vector<float> dedxlist;
+  for( const auto& cluster_key:get_cluster_keys(seed) )
+  {
+    // keep only TPC clusters
+    if( TrkrDefs::getTrkrId(cluster_key) != TrkrDefs::tpcId )
+    { continue; }
+
+    // cluster
+    auto cluster = m_cluster_map->findCluster( cluster_key );
+    if( !cluster )
+    { continue; }
+
+    // adc
+    const auto adc = cluster->getAdc();
+
+    // layer
+    const auto layer = TrkrDefs::getLayer(cluster_key);
+
+    // layer geometry
+    const auto layergeom = m_tpc_geom_container->GetLayerCellGeom(layer);
+
+    // layer thickness
+    const auto thickness = layergeom->get_thickness();
+
+    // layer radius
+    const auto r = layergeom->get_radius();
+
+    // rphi angle
+    const auto alpha = std::abs(r*seed->get_qOverR()/2);
+    const auto alphacorr = std::cos(alpha);
+
+    // rz angle
+    const auto beta = std::atan(seed->get_slope());
+    const auto betacorr = std::cos(beta);
+
+    // dedx
+    dedxlist.emplace_back( adc*alphacorr*betacorr/thickness );
+  }
+
+  /*
+   * question: would it not be more accurate to sum all the de,
+   * all the dx and make the division in the end ?
+   */
+
+  // check dedx lists
+  return dedxlist.empty() ? 0:std::accumulate( dedxlist.begin(), dedxlist.end(), 0 )/dedxlist.size();
+
+}
+
+//_____________________________________________________________________
 int TrackingEvaluator_hp::End(PHCompositeNode* )
 { return Fun4AllReturnCodes::EVENT_OK; }
 
@@ -849,7 +915,7 @@ void TrackingEvaluator_hp::evaluate_calo_clusters()
   {
     const auto& calo_name = m_calo_names.at(calo_layer);
     const auto clusters = clusterContainer->getClustersMap();
-    std::cout << "TrackingEvaluator_hp::evaluate_calo_clusters - " << calo_name << " map size: " << clusters.size() << std::endl;
+    // std::cout << "TrackingEvaluator_hp::evaluate_calo_clusters - " << calo_name << " map size: " << clusters.size() << std::endl;
 
     for( const auto& [key,calo_cluster]:clusters )
     { m_container->addCaloCluster( create_calo_cluster( calo_layer, calo_cluster ) ); }
@@ -922,8 +988,10 @@ void TrackingEvaluator_hp::evaluate_tracks()
       continue;
     }
 
-    // save
     track_struct._crossing = crossing;
+
+    // dedx
+    track_struct._dedx = get_dedx( track->get_tpc_seed() );
 
     // loop over clusters
     for( const auto& cluster_key:get_cluster_keys( track ) )
@@ -1095,7 +1163,7 @@ void TrackingEvaluator_hp::evaluate_tracks()
         if( dmin >= 0 )
         {
 
-          std::cout << "TrackingEvaluator_hp::evaluate_tracks - calo_layer: " << calo_layer << " dmin: " << dmin << std::endl;
+          // std::cout << "TrackingEvaluator_hp::evaluate_tracks - calo_layer: " << calo_layer << " dmin: " << dmin << std::endl;
 
           // store calo cluster
           track_struct._calo_clusters.push_back( calo_cluster_struct );
