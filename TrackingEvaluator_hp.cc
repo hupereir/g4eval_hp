@@ -306,6 +306,7 @@ namespace
     calo_cluster_struct._phi = std::atan2( calo_cluster_struct._y, calo_cluster_struct._x );
 
     calo_cluster_struct._e = cluster->get_energy();
+    calo_cluster_struct._chisquare = cluster->get_chi2();
 
     // loop over towers
     for( const auto& [index, energy]:range_adaptor(cluster->get_towers()))
@@ -666,8 +667,44 @@ float TrackingEvaluator_hp::get_dedx( TrackSeed* seed ) const
    */
 
   // check dedx lists
-  return dedxlist.empty() ? 0:std::accumulate( dedxlist.begin(), dedxlist.end(), 0 )/dedxlist.size();
+  return dedxlist.empty() ? 0:std::accumulate( dedxlist.begin(), dedxlist.end(), 0. )/dedxlist.size();
 
+}
+
+//_____________________________________________________________________
+float TrackingEvaluator_hp::get_truth_dedx( TrackSeed* seed, int trkid ) const
+{
+  if( !(seed && m_cluster_map))
+  { return 0; }
+
+  // get clusters associated to track
+  std::vector<float> dedxlist;
+  for( const auto& cluster_key:get_cluster_keys(seed) )
+  {
+    // keep only TPC clusters
+    if( TrkrDefs::getTrkrId(cluster_key) != TrkrDefs::tpcId )
+    { continue; }
+
+    // get associated g4hits
+    for( const auto& hit:find_g4hits( cluster_key ) )
+    {
+      // check mc track id
+      if( hit->get_trkid() != trkid ) continue;
+
+      // calculate dedx and store
+      const auto de = 1e6*hit->get_eion();
+      const auto dx = std::sqrt(
+        square(hit->get_x(1)-hit->get_x(0))+
+        square(hit->get_y(1)-hit->get_y(0))+
+        square(hit->get_z(1)-hit->get_z(0)));
+      dedxlist.emplace_back(de/dx);
+    }
+  }
+
+  const auto average = dedxlist.empty() ? 0:std::accumulate( dedxlist.begin(), dedxlist.end(), 0. )/dedxlist.size();
+
+  // check dedx lists
+  return average;
 }
 
 //_____________________________________________________________________
@@ -913,10 +950,7 @@ void TrackingEvaluator_hp::evaluate_calo_clusters()
   // loop over calo types
   for(const auto& [calo_layer, clusterContainer]:m_rawclustercontainermap)
   {
-    const auto& calo_name = m_calo_names.at(calo_layer);
     const auto clusters = clusterContainer->getClustersMap();
-    // std::cout << "TrackingEvaluator_hp::evaluate_calo_clusters - " << calo_name << " map size: " << clusters.size() << std::endl;
-
     for( const auto& [key,calo_cluster]:clusters )
     { m_container->addCaloCluster( create_calo_cluster( calo_layer, calo_cluster ) ); }
 
@@ -992,6 +1026,7 @@ void TrackingEvaluator_hp::evaluate_tracks()
 
     // dedx
     track_struct._dedx = get_dedx( track->get_tpc_seed() );
+    track_struct._truth_dedx = get_truth_dedx(track->get_tpc_seed(),id);
 
     // loop over clusters
     for( const auto& cluster_key:get_cluster_keys( track ) )

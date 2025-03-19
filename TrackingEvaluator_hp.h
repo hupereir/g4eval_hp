@@ -255,6 +255,7 @@ class TrackingEvaluator_hp : public SubsysReco
     float _r = 0;
     float _phi = 0;
     float _e = 0;
+    float _chisquare = 0;
     //@}
 
     //!@name matching track position
@@ -675,6 +676,9 @@ class TrackingEvaluator_hp : public SubsysReco
 
   //! calculate dedx from clusters only
   float get_dedx( TrackSeed* ) const;
+
+  //! calculate dedx from g4hits only
+  float get_truth_dedx( TrackSeed*, int) const;
 
   //! evaluation node
   Container* m_container = nullptr;
