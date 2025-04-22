@@ -330,6 +330,13 @@ class TrackingEvaluator_hp : public SubsysReco
     unsigned int _nclusters_tpc = 0;
     unsigned int _nclusters_micromegas = 0;
 
+    /// number of track states on track
+    unsigned int _nstates = 0;
+    unsigned int _nstates_mvtx = 0;
+    unsigned int _nstates_intt = 0;
+    unsigned int _nstates_tpc = 0;
+    unsigned int _nstates_micromegas = 0;
+
     float _chisquare = 0;
     int _ndf = 0;
 
@@ -403,6 +410,13 @@ class TrackingEvaluator_hp : public SubsysReco
     unsigned int _nclusters_intt = 0;
     unsigned int _nclusters_tpc = 0;
     unsigned int _nclusters_micromegas = 0;
+
+    /// number of track states on track
+    unsigned int _nstates = 0;
+    unsigned int _nstates_mvtx = 0;
+    unsigned int _nstates_intt = 0;
+    unsigned int _nstates_tpc = 0;
+    unsigned int _nstates_micromegas = 0;
 
     float _chisquare = 0;
     int _ndf = 0;

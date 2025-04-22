@@ -246,6 +246,23 @@ namespace
     return out;
   }
 
+  //! get cluster keys from a given track and detector
+  template <int type>
+  std::vector<TrkrDefs::cluskey> get_detector_cluster_keys(SvtxTrack* track)
+  {
+    std::vector<TrkrDefs::cluskey> out;
+    for (const auto& seed : {track->get_silicon_seed(), track->get_tpc_seed()})
+    {
+      if (seed)
+      {
+        std::copy_if(seed->begin_cluster_keys(), seed->end_cluster_keys(), std::back_inserter(out),
+          [](const TrkrDefs::cluskey& key)
+        { return TrkrDefs::getTrkrId(key) == type;} );
+      }
+    }
+    return out;
+  }
+
   //! true if a track is a primary
   inline int is_primary( PHG4Particle* particle )
   { return particle->get_parent_id() == 0; }
@@ -269,6 +286,14 @@ namespace
       []( const TrkrDefs::cluskey& key ) { return TrkrDefs::getTrkrId(key) == type; } );
   }
 
+  //! return number of states of a given type
+  template<int type>
+    int get_states( SvtxTrack* track )
+  {
+    return std::count_if( track->begin_states(), track->end_states(),
+      []( const std::pair<float, SvtxTrackState*>& state_pair ) { return TrkrDefs::getTrkrId(state_pair.second->get_cluskey()) == type; } );
+  }
+
   //! fill basic information to track struct
   template<class T>
     void fill_track_struct( T& trackStruct, SvtxTrack* track )
@@ -276,10 +301,16 @@ namespace
     trackStruct._charge = track->get_charge();
     trackStruct._nclusters = track->size_cluster_keys();
     trackStruct._mask = get_mask( track );
-    trackStruct._nclusters_mvtx = get_clusters<TrkrDefs::mvtxId>( track );
-    trackStruct._nclusters_intt = get_clusters<TrkrDefs::inttId>( track );
-    trackStruct._nclusters_tpc = get_clusters<TrkrDefs::tpcId>( track );
+    trackStruct._nclusters_mvtx = get_clusters<TrkrDefs::mvtxId>(track);
+    trackStruct._nclusters_intt = get_clusters<TrkrDefs::inttId>(track);
+    trackStruct._nclusters_tpc = get_clusters<TrkrDefs::tpcId>(track);
     trackStruct._nclusters_micromegas = get_clusters<TrkrDefs::micromegasId>( track );
+
+    trackStruct._nstates = std::distance( track->begin_states(), track->end_states() );
+    trackStruct._nstates_mvtx = get_states<TrkrDefs::mvtxId>(track);
+    trackStruct._nstates_intt = get_states<TrkrDefs::inttId>(track);
+    trackStruct._nstates_tpc = get_states<TrkrDefs::tpcId>(track);
+    trackStruct._nstates_micromegas = get_states<TrkrDefs::micromegasId>(track);
 
     trackStruct._chisquare = track->get_chisq();
     trackStruct._ndf = track->get_ndf();
@@ -515,6 +546,26 @@ namespace
   [[maybe_unused]] std::ostream& operator << (std::ostream& out, const TVector3& position)
   {
     out << "(" << position.x() << ", " << position.y() << ", " << position.z() << ")";
+    return out;
+  }
+
+  /// streamer
+  [[maybe_unused]] std::ostream& operator<<(std::ostream& out, const Acts::Vector3& v)
+  {
+    out << "(" << v.x() << "," << v.y() << "," << v.z() << ")";
+    return out;
+  }
+
+  /// streamer
+  std::ostream& operator<<(std::ostream& out, std::vector<TrkrDefs::cluskey> v)
+  {
+    if( v.empty() ) { out << "{}"; }
+    else {
+      out << "{";
+      for( const auto& key:v )
+      { out << " " << key; }
+      out << "}";
+    }
     return out;
   }
 
@@ -1380,49 +1431,23 @@ void TrackingEvaluator_hp::print_track(SvtxTrack* track) const
   std::cout << "TrackingEvaluator_hp::print_track - momentum: (" << track->get_px() << ", " << track->get_py() << ", " << track->get_pz() << ")" << std::endl;
   std::cout << "TrackingEvaluator_hp::print_track - clusters: " << get_cluster_keys( track ).size() << ", states: " << track->size_states() << std::endl;
 
-  const auto crossing = track->get_crossing();
+  std::cout << "TrackingEvaluator_hp::print_track - silicon seed id: " << track->get_silicon_seed() << std::endl;
+  std::cout << "TrackingEvaluator_hp::print_track - tpc seed id: " << track->get_tpc_seed() << std::endl;
+  std::cout << " MVTX cluster keys: " << get_detector_cluster_keys<TrkrDefs::mvtxId>(track) << std::endl;
+  std::cout << " INTT cluster keys: " << get_detector_cluster_keys<TrkrDefs::inttId>(track) << std::endl;
+  std::cout << " TPOT cluster keys: " << get_detector_cluster_keys<TrkrDefs::micromegasId>(track) << std::endl;
+  std::cout << " TPC cluster keys: " << get_detector_cluster_keys<TrkrDefs::tpcId>(track) << std::endl;
 
-  // loop over cluster keys
-  if( false && m_cluster_map )
+  // also print the TPC tracks states
+  for( auto iter = track->begin_states(); iter != track->end_states(); ++iter )
   {
-
-    for( const auto& cluster_key:get_cluster_keys( track ) )
-    {
-      auto cluster = m_cluster_map->findCluster( cluster_key );
-      if( !cluster )
-      {
-        std::cout << "TrackingEvaluator_hp::print_track - unable to find cluster for key " << cluster_key << std::endl;
-        continue;
-      }
-
-      // get global coordinates
-      const auto global = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(cluster_key, cluster, crossing);
-
-      std::cout
-        << "TrackingEvaluator_hp::print_track -"
-        << " cluster layer: "  << (int)TrkrDefs::getLayer(cluster_key)
-        << " position: (" << global.x() << ", " << global.y() << ", " << global.z() << ")"
-        << " polar: (" << get_r( global.x(), global.y() ) << ", " << std::atan2( global.y(), global.x() ) << "," << cluster->getZ() << ")"
-        << std::endl;
-
-    }
-  }
-
-  // loop over track states
-  if( false )
-  {
-    for( auto state_iter = track->begin_states(); state_iter != track->end_states(); ++ state_iter )
-    {
-      auto state = state_iter->second;
-      if( !state ) return;
-
-      std::cout
-        << "TrackingEvaluator_hp::print_track -"
-        << " state pathLength: " << state_iter->first
-        << " position: (" << state->get_x() << ", " << state->get_y() << ", " << state->get_z() << ")"
-        << " polar: (" << get_r( state->get_x(), state->get_y() ) << ", " << std::atan2( state->get_y(), state->get_x() ) << "," << state->get_z() << ")"
-        << std::endl;
-    }
+    const auto& [pathlenght, state] = *iter;
+    std::cout << " TrackState - "
+      << "ckey: " << state->get_cluskey()
+      << " layer: " << (int)TrkrDefs::getLayer(state->get_cluskey())
+      << " position: (" << state->get_x() << "," << state->get_y() << "," << state->get_z() << ")"
+      << " momentum: (" << state->get_px() << "," << state->get_py() << "," << state->get_px() << ")"
+      << std::endl;
   }
 
   std::cout << std::endl;
