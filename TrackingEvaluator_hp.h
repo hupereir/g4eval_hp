@@ -570,6 +570,7 @@ class TrackingEvaluator_hp : public SubsysReco
     EvalTrackPairs = 1<<3,
     PrintClusters = 1<<4,
     PrintTracks = 1<<5,
+    PrintSeeds = 1<<10,
     MicromegasOnly = 1<<7,
     EvalCMClusters = 1<<8,
     EvalCaloClusters = 1<<9
@@ -651,6 +652,9 @@ class TrackingEvaluator_hp : public SubsysReco
 
   //! print track content
   void print_track( SvtxTrack* ) const;
+
+  //! print seeds information
+  void print_seeds(PHCompositeNode*) const;
 
   // get geant hits associated to a cluster
   using G4HitSet = std::set<PHG4Hit*>;

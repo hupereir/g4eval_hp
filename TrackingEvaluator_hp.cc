@@ -5,6 +5,7 @@
 #include <calobase/RawTowerDefs.h>
 
 #include <ffarawobjects/Gl1RawHit.h>
+#include <ffarawobjects/Gl1Packet.h>
 #include <ffarawobjects/MicromegasRawHit.h>
 #include <ffarawobjects/MicromegasRawHitContainer.h>
 
@@ -24,11 +25,13 @@
 #include <phool/PHCompositeNode.h>
 #include <phool/PHNodeIterator.h>
 #include <tpc/TpcDistortionCorrectionContainer.h>
+
 #include <trackbase/ActsGeometry.h>
 #include <trackbase/CMFlashCluster.h>
 #include <trackbase/CMFlashClusterContainer.h>
 #include <trackbase/InttDefs.h>
 #include <trackbase/MvtxDefs.h>
+#include <trackbase/MvtxEventInfo.h>
 #include <trackbase/TpcDefs.h>
 #include <trackbase/TrkrDefs.h>
 #include <trackbase/TrkrCluster.h>
@@ -38,8 +41,10 @@
 #include <trackbase/TrkrHitSet.h>
 #include <trackbase/TrkrHitSetContainer.h>
 #include <trackbase/TrkrHitTruthAssoc.h>
+#include <trackbase/TrkrClusterCrossingAssoc.h>
 #include <trackbase_historic/SvtxTrack.h>
 #include <trackbase_historic/SvtxTrackMap.h>
+#include <trackbase_historic/TrackSeedContainer.h>
 
 #include <TVector3.h>
 
@@ -299,7 +304,7 @@ namespace
     void fill_track_struct( T& trackStruct, SvtxTrack* track )
   {
     trackStruct._charge = track->get_charge();
-    trackStruct._nclusters = track->size_cluster_keys();
+    trackStruct._nclusters = get_cluster_keys( track ).size();
     trackStruct._mask = get_mask( track );
     trackStruct._nclusters_mvtx = get_clusters<TrkrDefs::mvtxId>(track);
     trackStruct._nclusters_intt = get_clusters<TrkrDefs::inttId>(track);
@@ -557,7 +562,8 @@ namespace
   }
 
   /// streamer
-  std::ostream& operator<<(std::ostream& out, std::vector<TrkrDefs::cluskey> v)
+  template<class T>
+  std::ostream& operator<<(std::ostream& out, std::vector<T> v)
   {
     if( v.empty() ) { out << "{}"; }
     else {
@@ -569,6 +575,18 @@ namespace
     return out;
   }
 
+  template<class T>
+  std::ostream& operator<<(std::ostream& out, std::set<T> v)
+  {
+    if( v.empty() ) { out << "{}"; }
+    else {
+      out << "{";
+      for( const auto& key:v )
+      { out << " " << key; }
+      out << "}";
+    }
+    return out;
+  }
 }
 
 //_____________________________________________________________________
@@ -641,7 +659,7 @@ int TrackingEvaluator_hp::InitRun(PHCompositeNode* topNode)
 int TrackingEvaluator_hp::process_event(PHCompositeNode* topNode)
 {
   // load nodes
-  auto res =  load_nodes(topNode);
+  const auto res =  load_nodes(topNode);
   if( res != Fun4AllReturnCodes::EVENT_OK ) return res;
 
   // cleanup output
@@ -649,6 +667,7 @@ int TrackingEvaluator_hp::process_event(PHCompositeNode* topNode)
 
   if(m_flags&PrintClusters) print_clusters();
   if(m_flags&PrintTracks) print_tracks();
+  if(m_flags&PrintSeeds) print_seeds(topNode);
   if(m_flags&EvalEvent) evaluate_event();
   if(m_flags&EvalClusters) evaluate_clusters();
   if(m_flags&EvalCaloClusters) evaluate_calo_clusters();
@@ -1438,6 +1457,22 @@ void TrackingEvaluator_hp::print_track(SvtxTrack* track) const
   std::cout << " TPOT cluster keys: " << get_detector_cluster_keys<TrkrDefs::micromegasId>(track) << std::endl;
   std::cout << " TPC cluster keys: " << get_detector_cluster_keys<TrkrDefs::tpcId>(track) << std::endl;
 
+  // print MVTX cluster keys
+  for( const auto ckey:get_detector_cluster_keys<TrkrDefs::mvtxId>(track) )
+  {
+    // get cluster from map
+    if( m_cluster_map )
+    {
+      auto cluster = m_cluster_map->findCluster( ckey );
+      std::cout << " MVTX cluster: " << ckey
+        << " position: (" << cluster->getLocalX() << ", " << cluster->getLocalY() << ")"
+        << " size: " << cluster->getSize()
+        << " stave: " << (int) MvtxDefs::getStaveId(ckey) << " chip: " << (int)MvtxDefs::getChipId(ckey) << " strobe: " << (int)MvtxDefs::getStrobeId(ckey) << std::endl;
+    } else {
+      std::cout << " MVTX cluster: " << ckey << " stave: " << (int) MvtxDefs::getStaveId(ckey) << " chip: " << (int)MvtxDefs::getChipId(ckey) << " strobe: " << (int)MvtxDefs::getStrobeId(ckey) << std::endl;
+    }
+  }
+
   // also print the TPC tracks states
   for( auto iter = track->begin_states(); iter != track->end_states(); ++iter )
   {
@@ -1452,6 +1487,134 @@ void TrackingEvaluator_hp::print_track(SvtxTrack* track) const
 
   std::cout << std::endl;
 
+}
+
+//_____________________________________________________________________
+void TrackingEvaluator_hp::print_seeds( PHCompositeNode* topNode ) const
+{
+
+  const auto silicon_seed_container = findNode::getClass<TrackSeedContainer>(topNode, "SiliconTrackSeedContainer");
+  if( silicon_seed_container )
+  {
+    // loop over seeds
+    for( unsigned int index = 0; const auto& seed:*silicon_seed_container )
+    {
+      if( !seed ) continue;
+      if( seed->get_crossing() == SHRT_MAX ) continue;
+
+      std::cout << "TrackingEvaluator_hp::print_seeds - seed index: " << index++ << " crossing: " << seed->get_crossing() << std::endl;
+
+      // loop over cluster keys
+      std::set<TrkrDefs::cluskey> cluster_keys;
+      std::copy( seed->begin_cluster_keys(), seed->end_cluster_keys(), std::inserter(cluster_keys, cluster_keys.end()) );
+      std::cout << "TrackingEvaluator_hp::print_seeds - keys: " << cluster_keys << std::endl;
+
+      for( auto key_iter = seed->begin_cluster_keys(); key_iter != seed->end_cluster_keys(); ++key_iter )
+      {
+        const auto& ckey(*key_iter);
+        const auto trkrId = TrkrDefs::getTrkrId(ckey);
+        if( trkrId == TrkrDefs::mvtxId )
+        {
+          // get cluster from map
+          if( m_cluster_map )
+          {
+            auto cluster = m_cluster_map->findCluster( ckey );
+            std::cout << " MVTX cluster: " << ckey
+              << " position: (" << cluster->getLocalX() << ", " << cluster->getLocalY() << ")"
+              << " stave: " << (int) MvtxDefs::getStaveId(ckey) << " chip: " << (int)MvtxDefs::getChipId(ckey) << " strobe: " << (int)MvtxDefs::getStrobeId(ckey) << std::endl;
+          } else {
+            std::cout << " MVTX cluster: " << ckey << " stave: " << (int) MvtxDefs::getStaveId(ckey) << " chip: " << (int)MvtxDefs::getChipId(ckey) << " strobe: " << (int)MvtxDefs::getStrobeId(ckey) << std::endl;
+          }
+
+        }
+      }
+    }
+
+//   // GL1 BCO
+//   auto gl1 = findNode::getClass<Gl1Packet>(topNode, "GL1RAWHIT");
+//   if (gl1)
+//   {
+//     std::cout << "TrackingEvaluator_hp::print_seeds - GL1 BCO" << gl1->lValue(0, "BCO") << std::endl;
+//   }
+//
+//   // print all cluster to crossing associations
+//   const auto clustercrossingassoc = findNode::getClass<TrkrClusterCrossingAssoc>(topNode, "TRKR_CLUSTERCROSSINGASSOC");
+//   if( false )
+//   {
+//     if( clustercrossingassoc )
+//     {
+//       for( const auto&[clus_key,crossing]:range_adaptor(clustercrossingassoc->getAll()))
+//       {
+//         std::cout << "TrackingEvaluator_hp::print_seeds - [" << clus_key << "," << crossing << "]" << std::endl;
+//       }
+//     } else {
+//       std::cout << "TrackingEvaluator_hp::print_seeds - TrkrClusterCrossingAssoc not found" << std::endl;
+//     }
+//   }
+//
+//   // print MVTX strobes and BCO
+//   const auto mvtx_event_info = findNode::getClass<MvtxEventInfo>(topNode, "MVTXEVENTHEADER");
+//   if( mvtx_event_info )
+//   {
+//     std::cout << "TrackingEvaluator_hp::print_seeds - l1 bco:" << mvtx_event_info->get_L1_BCOs() << std::endl;
+//     std::cout << "TrackingEvaluator_hp::print_seeds - strobe bco:" << mvtx_event_info->get_strobe_BCOs() << std::endl;
+//   } else {
+//     std::cout << "TrackingEvaluator_hp::print_seeds - MvtxEventInfo not found" << std::endl;
+//   }
+//
+//   // loop over seeds
+//   // get INTT BCO
+//   // get MVTX strobes, starting BCO and compare. I need to put that in a histogram
+//   const auto silicon_seed_container = findNode::getClass<TrackSeedContainer>(topNode, "SiliconTrackSeedContainer");
+//   if( silicon_seed_container )
+//   {
+//     // loop over seeds
+//     for( unsigned int index = 0; const auto& seed:*silicon_seed_container )
+//     {
+//       if( !seed ) continue;
+//       if( seed->get_crossing() == SHRT_MAX ) continue;
+//
+//       std::cout << "TrackingEvaluator_hp::print_seeds - seed index: " << index++ << " crossing: " << seed->get_crossing() << std::endl;
+//
+//       // store crossing
+//       std::set<int> crossings;
+//       std::set<int> crossings_map;
+//       std::set<int> strobes;
+//
+//       // loop over cluster keys
+//       for( auto key_iter = seed->begin_cluster_keys(); key_iter != seed->end_cluster_keys(); ++key_iter )
+//       {
+//         const auto& clus_key(*key_iter);
+//         const auto trkrId = TrkrDefs::getTrkrId(clus_key);
+//         switch(trkrId)
+//         {
+//           case TrkrDefs::inttId:
+//           crossings.insert(InttDefs::getTimeBucketId(clus_key));
+// //           if( clustercrossingassoc )
+// //           {
+// //             for(const auto& [key,crossing]:range_adaptor(clustercrossingassoc->getCrossings(clus_key)))
+// //             { crossings_map.insert(crossing);}
+// //           }
+//           break;
+//
+//           case TrkrDefs::mvtxId:
+//           strobes.insert(MvtxDefs::getStrobeId(clus_key));
+//           break;
+//
+//           default: break;
+//         }
+//       }
+//
+//       // print
+//       std::cout << "TrackingEvaluator_hp::print_seeds - strobes: " << strobes << " crossings: " << crossings << " from map: " << crossings_map << std::endl;
+//
+//       //
+//
+//     }
+
+  } else {
+    std::cout << "TrackingEvaluator_hp::print_seeds - SiliconTrackSeedContainer not found" << std::endl;
+  }
 }
 
 //_____________________________________________________________________
