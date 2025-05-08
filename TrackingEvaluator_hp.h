@@ -3,6 +3,7 @@
 
 #include <fun4all/SubsysReco.h>
 #include <phool/PHObject.h>
+#include <tpc/TpcClusterMover.h>
 #include <tpc/TpcGlobalPositionWrapper.h>
 #include <trackbase/TrkrDefs.h>
 #include <trackbase_historic/ActsTransformations.h>
@@ -573,7 +574,8 @@ class TrackingEvaluator_hp : public SubsysReco
     PrintSeeds = 1<<10,
     MicromegasOnly = 1<<7,
     EvalCMClusters = 1<<8,
-    EvalCaloClusters = 1<<9
+    EvalCaloClusters = 1<<9,
+    UseTpcClusterMover = 1<<11
   };
 
   //! set flags. Should be a bitwise or of Flags enum
@@ -709,6 +711,9 @@ class TrackingEvaluator_hp : public SubsysReco
 
   //! global position wrapper
   TpcGlobalPositionWrapper m_globalPositionWrapper;
+
+  //! tpc cluster mover
+  TpcClusterMover m_tpcClusterMover;
 
   //! GL1
   Gl1RawHit* m_gl1rawhit = nullptr;
