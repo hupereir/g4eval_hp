@@ -139,7 +139,7 @@ namespace
     // assign charge
     auto pdgParticle = TDatabasePDG::Instance()->GetParticle(particleStruct._pid);
     if( pdgParticle )
-    { particleStruct._charge = pdgParticle->Charge()*3; }
+    { particleStruct._charge = pdgParticle->Charge()/3; }
 
     particleStruct._is_primary = is_primary( particle );
     particleStruct._px = particle->get_px();
