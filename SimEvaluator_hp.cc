@@ -17,10 +17,8 @@
 #include <trackbase_historic/SvtxTrack.h>
 
 #include <Geant4/G4SystemOfUnits.hh>
-#include <Geant4/G4ParticleDefinition.hh>
-#include <Geant4/G4ParticleTable.hh>
-
 #include <HepMC/GenEvent.h>
+#include <TDatabasePDG.h>
 
 #include <algorithm>
 #include <bitset>
@@ -137,7 +135,12 @@ namespace
     particleStruct._parent_id = particle->get_parent_id();
     particleStruct._primary_id = particle->get_primary_id();
     particleStruct._pid = particle->get_pid();
-    // particleStruct._charge = particle->get_IonCharge()/eplus;
+
+    // assign charge
+    auto pdgParticle = TDatabasePDG::Instance()->GetParticle(particleStruct._pid);
+    if( pdgParticle )
+    { particleStruct._charge = pdgParticle->Charge()*3; }
+
     particleStruct._is_primary = is_primary( particle );
     particleStruct._px = particle->get_px();
     particleStruct._py = particle->get_py();
@@ -359,23 +362,12 @@ void SimEvaluator_hp::fill_event()
   // count number of primary particles with pt > 0.5
   if( m_g4truthinfo )
   {
-    const auto range = m_g4truthinfo->GetPrimaryParticleRange();
-    for( auto iter = range.first; iter != range.second; ++iter )
+    for( const auto& [id, particle]:range_adaptor(m_g4truthinfo->GetPrimaryParticleRange()) )
     {
-      auto particle = iter->second;
       if( !particle ) continue;
 
       // create convenient structure from particle
       auto pstruct = create_particle( particle );
-
-      // assign charge
-      auto particleTable = G4ParticleTable::GetParticleTable();
-      auto particleDefinition = particleTable->FindParticle(pstruct._pid);
-      if( particleDefinition )
-      {
-        pstruct._charge = particleDefinition->GetPDGCharge();
-        std::cout << "SimEvaluator_hp::fill_event - particle: " << pstruct._pid << " charge: " << pstruct._charge << std::endl;
-      }
 
       // check pt, charge and pseudo rapidity
       if( pstruct._pt > 0.5 && std::abs( pstruct._eta ) < 1 && pstruct._charge != 0 )
@@ -423,32 +415,27 @@ void SimEvaluator_hp::fill_particles()
   // clear vertices from previous event
   m_container->clearParticleList();
 
-  // get the set of embeded ids from truth info
+//   // get the set of embeded ids from truth info
+//   {
+//     std::set<int> embed_ids;
+//     for( const auto& [id,embed_id]:range_adaptor(m_g4truthinfo->GetEmbeddedTrkIds()) );
+//     { embed_ids.insert( embed_id ); }
+//   }
+
+  for( const auto& [id,particle]:range_adaptor(m_g4truthinfo->GetParticleRange()))
   {
-    std::set<int> embed_ids;
-    auto range = m_g4truthinfo->GetEmbeddedTrkIds();
-    for( auto iter = range.first; iter != range.second; ++iter ) { embed_ids.insert( iter->second ); }
-  }
+    if( !particle ) continue;
+    auto particleStruct = create_particle( particle );
 
-  auto range = m_g4truthinfo->GetParticleRange();
-  // auto range = m_g4truthinfo->GetPrimaryParticleRange();
-  for( auto iter = range.first; iter != range.second; ++iter )
-  {
-    auto particle = iter->second;
-    if( particle )
-    {
-      auto particleStruct = create_particle( particle );
+    // embed index
+    particleStruct._embed = get_embed( particle );
 
-      // embed index
-      particleStruct._embed = get_embed( particle );
+    // hit mask
+    const auto iter( m_g4particle_map.find( particle->get_track_id() ) );
+    if( iter !=  m_g4particle_map.cend() )
+    { particleStruct._mask = iter->second; }
 
-      // hit mask
-      const auto iter( m_g4particle_map.find( particle->get_track_id() ) );
-      if( iter !=  m_g4particle_map.cend() )
-      { particleStruct._mask = iter->second; }
-
-      m_container->addParticle( particleStruct );
-    }
+    m_container->addParticle( particleStruct );
   }
 }
 
