@@ -853,6 +853,15 @@ int TrackingEvaluator_hp::load_nodes( PHCompositeNode* topNode )
       auto clusterContainer = findNode::getClass<RawClusterContainer>(topNode, clusterNodeName.c_str());
       if( clusterContainer )
       {
+        if( Verbosity())
+        {
+          std::cout
+            << "TrackingEvaluator_hp::load_nodes -"
+            << " adding calorimeter clusters from "
+            << clusterNodeName
+            << std::endl;
+        }
+
         m_rawclustercontainermap.emplace( calo_layer, clusterContainer );
         break;
       }
@@ -1261,26 +1270,41 @@ void TrackingEvaluator_hp::evaluate_tracks()
           // cluster r
           const auto cluster_r = get_r(cluster->get_x(),cluster->get_y());
 
-          // find matching state vector
-          float dr_min = -1;
-          auto state_iter = track->begin_states();
-          for( auto iter = state_iter; iter != track->end_states(); ++iter )
+          // find iterators at smaller and larger radius than current cluster
+          bool found = false;
+          auto state_iter_before = track->begin_states();
+          auto state_iter_after = track->begin_states();
+
+          for( auto iter = state_iter_before; iter != track->end_states(); ++iter )
           {
-            const auto dr = std::abs( cluster_r - get_r( iter->second->get_x(), iter->second->get_y() ) );
-            if( dr_min < 0 || dr < dr_min )
-            {
-              state_iter = iter;
-              dr_min = dr;
+            const auto state_r =  get_r( iter->second->get_x(), iter->second->get_y() );
+            if( state_r < cluster_r ) { state_iter_before = iter; }
+            if( state_r > cluster_r ) {
+              state_iter_after = iter;
+              found = true;
+              break;
             }
           }
 
           // no state found
-          if( dr_min < 0 ) continue;
-
-          // std::cout << "TrackingEvaluator_hp::evaluate_tracks - calo_layer: " << calo_layer << " dr_min: " << dr_min << std::endl;
+          if( !found ) continue;
 
           // calculate distance between track state and cluster
-          const auto& state = state_iter->second;
+          const auto& state_before = state_iter_before->second;
+          const auto& state_after = state_iter_after->second;
+
+          const auto state_r_before = get_r( state_before->get_x(), state_before->get_y() );
+          const auto state_r_after = get_r( state_after->get_x(), state_after->get_y() );
+
+          std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
+            << " calo_layer: " << calo_layer
+            << " cluster_r: " << cluster_r
+            << " state_r_before: " << state_r_before
+            << " state_r_after: " << state_r_after
+            << std::endl;
+
+          // calculate distance between track state and cluster
+          const auto& state = state_before;
 
           // extrapolate track state to same r as cluster and calculate distance
           // need to extrapolate to the right r
@@ -1308,15 +1332,13 @@ void TrackingEvaluator_hp::evaluate_tracks()
             calo_cluster_struct._trk_z = trk_z;
             calo_cluster_struct._trk_r = get_r( trk_x, trk_y );
             calo_cluster_struct._trk_phi = std::atan2( trk_y, trk_x );
-            calo_cluster_struct._trk_dr = dr_min;
+            calo_cluster_struct._trk_dr = dr;
           }
         }
 
         if( dmin >= 0 )
         {
-
           // std::cout << "TrackingEvaluator_hp::evaluate_tracks - calo_layer: " << calo_layer << " dmin: " << dmin << std::endl;
-
           // store calo cluster
           track_struct._calo_clusters.push_back( calo_cluster_struct );
         }
