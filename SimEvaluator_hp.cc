@@ -14,8 +14,11 @@
 #include <phool/PHCompositeNode.h>
 #include <phool/PHNodeIterator.h>
 #include <trackbase/TrkrDefs.h>
+#include <trackbase_historic/SvtxTrack.h>
 
 #include <Geant4/G4SystemOfUnits.hh>
+#include <Geant4/G4ParticleDefinition.hh>
+#include <Geant4/G4ParticleTable.hh>
 
 #include <HepMC/GenEvent.h>
 
@@ -130,8 +133,11 @@ namespace
   SimEvaluator_hp::ParticleStruct create_particle( PHG4Particle* particle )
   {
     SimEvaluator_hp::ParticleStruct particleStruct;
+    particleStruct._trkid = particle->get_track_id();
+    particleStruct._parent_id = particle->get_parent_id();
+    particleStruct._primary_id = particle->get_primary_id();
     particleStruct._pid = particle->get_pid();
-    particleStruct._charge = particle->get_IonCharge()/eplus;
+    // particleStruct._charge = particle->get_IonCharge()/eplus;
     particleStruct._is_primary = is_primary( particle );
     particleStruct._px = particle->get_px();
     particleStruct._py = particle->get_py();
@@ -148,6 +154,8 @@ namespace
   SimEvaluator_hp::G4HitStruct create_g4hit( PHG4Hit* g4hit )
   {
     SimEvaluator_hp::G4HitStruct g4hitstruct;
+    g4hitstruct._layer = g4hit->get_layer();
+    g4hitstruct._trkid = g4hit->get_trkid();
     g4hitstruct._t = g4hit->get_avg_t();
     g4hitstruct._x = g4hit->get_avg_x();
     g4hitstruct._y = g4hit->get_avg_y();
@@ -265,10 +273,13 @@ int SimEvaluator_hp::load_nodes( PHCompositeNode* topnode )
   m_g4truthinfo = findNode::getClass<PHG4TruthInfoContainer>(topnode, "G4TruthInfo");
 
   // g4hits
-  m_g4hits_tpc = findNode::getClass<PHG4HitContainer>(topnode, "G4HIT_TPC");
-  m_g4hits_intt = findNode::getClass<PHG4HitContainer>(topnode, "G4HIT_INTT");
   m_g4hits_mvtx = findNode::getClass<PHG4HitContainer>(topnode, "G4HIT_MVTX");
+  m_g4hits_intt = findNode::getClass<PHG4HitContainer>(topnode, "G4HIT_INTT");
+  m_g4hits_tpc = findNode::getClass<PHG4HitContainer>(topnode, "G4HIT_TPC");
   m_g4hits_micromegas = findNode::getClass<PHG4HitContainer>(topnode, "G4HIT_MICROMEGAS");
+  m_g4hits_cemc = findNode::getClass<PHG4HitContainer>(topnode, "G4HIT_CEMC");
+  m_g4hits_hcalin = findNode::getClass<PHG4HitContainer>(topnode, "G4HIT_HCALIN");
+  m_g4hits_hcalout = findNode::getClass<PHG4HitContainer>(topnode, "G4HIT_HCALOUT");
 
   // event header
   m_eventheader = findNode::getClass<EventHeader>(topnode, "EventHeader");
@@ -355,7 +366,16 @@ void SimEvaluator_hp::fill_event()
       if( !particle ) continue;
 
       // create convenient structure from particle
-      const auto pstruct = create_particle( particle );
+      auto pstruct = create_particle( particle );
+
+      // assign charge
+      auto particleTable = G4ParticleTable::GetParticleTable();
+      auto particleDefinition = particleTable->FindParticle(pstruct._pid);
+      if( particleDefinition )
+      {
+        pstruct._charge = particleDefinition->GetPDGCharge();
+        std::cout << "SimEvaluator_hp::fill_event - particle: " << pstruct._pid << " charge: " << pstruct._charge << std::endl;
+      }
 
       // check pt, charge and pseudo rapidity
       if( pstruct._pt > 0.5 && std::abs( pstruct._eta ) < 1 && pstruct._charge != 0 )
@@ -379,7 +399,8 @@ void SimEvaluator_hp::fill_vertices()
   // get main primary vertex id
   const auto main_vertex_id = m_g4truthinfo->GetPrimaryVertexIndex();
 
-  auto range = m_g4truthinfo->GetPrimaryVtxRange();
+  auto range = m_g4truthinfo->GetVtxRange();
+  // auto range = m_g4truthinfo->GetPrimaryVtxRange();
   for( auto iter = range.first; iter != range.second; ++iter )
   {
     auto vertex = iter->second;
@@ -407,12 +428,10 @@ void SimEvaluator_hp::fill_particles()
     std::set<int> embed_ids;
     auto range = m_g4truthinfo->GetEmbeddedTrkIds();
     for( auto iter = range.first; iter != range.second; ++iter ) { embed_ids.insert( iter->second ); }
-//     std::cout << "SimEvaluator_hp::fill_particles - embedding ids: " << embed_ids.size() << std::endl;
-//     for( const auto& id:embed_ids ) std::cout << " " << id;
-//     std::cout << std::endl;
   }
 
-  auto range = m_g4truthinfo->GetPrimaryParticleRange();
+  auto range = m_g4truthinfo->GetParticleRange();
+  // auto range = m_g4truthinfo->GetPrimaryParticleRange();
   for( auto iter = range.first; iter != range.second; ++iter )
   {
     auto particle = iter->second;
@@ -441,39 +460,84 @@ void SimEvaluator_hp::fill_hits()
   // clear container
   m_container->clearG4Hits();
 
-  // map detector id to g4hit container
-  std::map<TrkrDefs::TrkrId, PHG4HitContainer*> containers = {
-    { TrkrDefs::mvtxId, m_g4hits_mvtx },
-    { TrkrDefs::inttId, m_g4hits_intt },
-    { TrkrDefs::tpcId, m_g4hits_tpc },
-    { TrkrDefs::micromegasId, m_g4hits_micromegas }
-  };
-
-  // loop over containers
-  for( const auto& pair:containers )
   {
-    const auto& container( pair.second );
-    if( !container ) continue;
+    // map tracker detector id to g4hit container
+    std::map<TrkrDefs::TrkrId, PHG4HitContainer*> containers = {
+      { TrkrDefs::mvtxId, m_g4hits_mvtx },
+      { TrkrDefs::inttId, m_g4hits_intt },
+      { TrkrDefs::tpcId, m_g4hits_tpc },
+      { TrkrDefs::micromegasId, m_g4hits_micromegas }
+    };
 
-    // load g4hits
-    const auto range = container->getHits();
-    for( auto iter = range.first; iter != range.second; ++iter )
+    // loop over tracker containers
+    for( const auto& pair:containers )
     {
+      const auto& container( pair.second );
+      if( !container ) continue;
 
-      // create hit
-      auto g4hit = create_g4hit( iter->second );
+      // load g4hits
+      const auto range = container->getHits();
+      for( auto iter = range.first; iter != range.second; ++iter )
+      {
 
-      // detector id
-      g4hit._detid = static_cast<int>( pair.first );
+        // create hit
+        auto g4hit = create_g4hit( iter->second );
 
-      // embed id
-      if( m_g4truthinfo )
-      { g4hit._embed = get_embed( iter->second ); }
+        // detector id
+        g4hit._detid = static_cast<int16_t>( pair.first );
 
-      // add
-      m_container->addG4Hit( g4hit );
+        // embed id
+        if( m_g4truthinfo )
+        {
+          g4hit._embed = get_embed( iter->second );
+          g4hit._pid = get_pid( iter->second );
+        }
+
+        // add
+        m_container->addG4Hit( g4hit );
+      }
     }
   }
+
+  {
+    // do the same with calorimeter
+    // map tracker detector id to g4hit container
+    std::map<SvtxTrack::CAL_LAYER, PHG4HitContainer*> containers = {
+      { SvtxTrack::CEMC, m_g4hits_cemc },
+      { SvtxTrack::HCALIN, m_g4hits_hcalin },
+      { SvtxTrack::HCALOUT, m_g4hits_hcalout },
+    };
+
+    // loop over tracker containers
+    for( const auto& pair:containers )
+    {
+      const auto& container( pair.second );
+      if( !container ) continue;
+
+      // load g4hits
+      const auto range = container->getHits();
+      for( auto iter = range.first; iter != range.second; ++iter )
+      {
+
+        // create hit
+        auto g4hit = create_g4hit( iter->second );
+
+        // detector id
+        g4hit._caloid = static_cast<int16_t>( pair.first );
+
+        // embed id
+        if( m_g4truthinfo )
+        {
+          g4hit._embed = get_embed( iter->second );
+          g4hit._pid = get_pid( iter->second );
+        }
+
+        // add
+        m_container->addG4Hit( g4hit );
+      }
+    }
+  }
+
 }
 
 //_____________________________________________________________________
@@ -530,3 +594,19 @@ int SimEvaluator_hp::get_embed( PHG4Hit* hit )
 //_____________________________________________________________________
 int SimEvaluator_hp::get_embed( PHG4Particle* particle ) const
 { return (m_g4truthinfo && particle) ? m_g4truthinfo->isEmbeded( particle->get_primary_id() ):0; }
+
+//_____________________________________________________________________
+int SimEvaluator_hp::get_pid( PHG4Hit* hit )
+{
+  if(!(m_g4truthinfo && hit)) return 0;
+
+  // get trk id
+  const auto trk_id = hit->get_trkid();
+  const auto iter = m_pid_map.lower_bound( trk_id );
+  if( iter != m_pid_map.end() && iter->first == trk_id ) return iter->second;
+
+  // get particle, pid, insert in map and return
+  const auto particle = m_g4truthinfo->GetParticle( trk_id );
+  const auto pid = particle->get_pid();
+  return m_pid_map.insert( iter, std::make_pair( trk_id, pid ) )->second;
+}
