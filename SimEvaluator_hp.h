@@ -82,6 +82,9 @@ class SimEvaluator_hp : public SubsysReco
     int _charge = 0;
     int _pid = 0;
     int _embed = 0;
+    int _trkid = 0;
+    int _parent_id = 0;
+    int _primary_id = 0;
     bool _is_primary = false;
     int64_t _mask = 0;
 
@@ -100,14 +103,36 @@ class SimEvaluator_hp : public SubsysReco
   {
     public:
     using List = std::vector<G4HitStruct>;
-    int _embed = 0;
-    int _detid = 0;
+
+    //! embeded index
+    int16_t _embed = 0;
+
+    //! detector id
+    int16_t _detid = -1;
+
+    //! calorimeter id
+    int16_t _caloid = -1;
+
+    //! layer
+    int16_t _layer = 0;
+
+    //! associated PHG4Particle
+    int _trkid = 0;
+
+    //! associated particle type
+    int _pid = 0;
+
+    //! position
     float _x = 0;
     float _y = 0;
     float _z = 0;
     float _r = 0;
     float _phi = 0;
+
+    //! time
     float _t = 0;
+
+    //! g4hit path length
     float _length = 0;
   };
 
@@ -126,7 +151,7 @@ class SimEvaluator_hp : public SubsysReco
     Container& operator = ( const Container& ) = delete;
 
     //! reset
-    virtual void Reset();
+    void Reset() override;
 
     //!@name accessors
     //@{
@@ -188,7 +213,7 @@ class SimEvaluator_hp : public SubsysReco
     //* hits
     G4HitStruct::List _g4hits;
 
-    ClassDef(Container,1)
+    ClassDefOverride(Container,1)
 
   };
 
@@ -240,6 +265,9 @@ class SimEvaluator_hp : public SubsysReco
   // get embedded id for given g4track
   int get_embed(PHG4Particle*) const;
 
+  // get pid id for given g4hit
+  int get_pid(PHG4Hit*);
+
   //* data container
   Container* m_container = nullptr;
 
@@ -251,6 +279,11 @@ class SimEvaluator_hp : public SubsysReco
   PHG4HitContainer* m_g4hits_intt = nullptr;
   PHG4HitContainer* m_g4hits_tpc = nullptr;
   PHG4HitContainer* m_g4hits_micromegas = nullptr;
+
+  // calorimeters
+  PHG4HitContainer* m_g4hits_cemc = nullptr;
+  PHG4HitContainer* m_g4hits_hcalin = nullptr;
+  PHG4HitContainer* m_g4hits_hcalout = nullptr;
 
   //* hep event
   PHHepMCGenEventMap* m_geneventmap = nullptr;
@@ -268,6 +301,10 @@ class SimEvaluator_hp : public SubsysReco
   // map trk_id to layer mask
   using G4ParticleMap = std::map<int,int64_t>;
   G4ParticleMap m_g4particle_map;
+
+  // pid map
+  using PidMap = std::map<int,int>;
+  PidMap m_pid_map;
 
 };
 
