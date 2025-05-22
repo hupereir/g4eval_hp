@@ -3,8 +3,6 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-AM_CXXFLAGS = `geant4-config --cflags`
-
 AM_CPPFLAGS = \
   -I$(includedir) \
   -I$(OFFLINE_MAIN)/include \
@@ -13,8 +11,7 @@ AM_CPPFLAGS = \
 
 AM_LDFLAGS = \
   -L$(libdir) \
-  -L$(OFFLINE_MAIN)/lib \
-  `geant4-config --libs`
+  -L$(OFFLINE_MAIN)/lib
 
 lib_LTLIBRARIES = \
    libg4eval_hp.la
