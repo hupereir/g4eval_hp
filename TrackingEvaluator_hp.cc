@@ -1243,90 +1243,17 @@ void TrackingEvaluator_hp::evaluate_tracks()
     if(m_flags&EvalCaloClusters)
     {
 
-      // loop over calorimeter layers
-      for( const auto& [calo_layer, container]:m_rawclustercontainermap )
+      // emcal extrapolation
+      if( const auto result = find_calo_cluster_emcal(track) )
+      { track_struct._calo_clusters.push_back( result.value() ); }
+
+      // calorimeter extrapolation
+      for(const auto& calo_layer:{SvtxTrack::HCALIN, SvtxTrack::HCALOUT})
       {
-        // cut on cluster energy
-        const auto min_energy = m_calo_min_energy[calo_layer];
-
-        // calo cluster struct
-        TrackingEvaluator_hp::CaloClusterStruct calo_cluster_struct;
-        float dmin = -1;
-
-        for( const auto& [key,cluster]:range_adaptor( container->getClusters()))
-        {
-
-          if( cluster->get_energy() < min_energy ) continue;
-
-          // cluster r
-          const auto cluster_r = get_r(cluster->get_x(),cluster->get_y());
-
-          // find matching state vector
-          float dr_min = -1;
-          auto state_iter = track->begin_states();
-          for( auto iter = state_iter; iter != track->end_states(); ++iter )
-          {
-            const auto dr = std::abs( cluster_r - get_r( iter->second->get_x(), iter->second->get_y() ) );
-            if( dr_min < 0 || dr < dr_min )
-            {
-              state_iter = iter;
-              dr_min = dr;
-            }
-          }
-
-          // no state found
-          if( dr_min < 0 ) continue;
-
-          // std::cout << "TrackingEvaluator_hp::evaluate_tracks - calo_layer: " << calo_layer << " dr_min: " << dr_min << std::endl;
-
-          // calculate distance between track state and cluster
-          const auto& state = state_iter->second;
-
-          // extrapolate track state to same r as cluster and calculate distance
-          // need to extrapolate to the right r
-          const auto trk_r = get_r( state->get_x(), state->get_y() );
-          const auto dr = cluster_r - trk_r;
-
-          const auto trk_drdt = (state->get_x()*state->get_px() + state->get_y()*state->get_py())/trk_r;
-          const auto trk_dxdr = state->get_px()/trk_drdt;
-          const auto trk_dydr = state->get_py()/trk_drdt;
-          const auto trk_dzdr = state->get_pz()/trk_drdt;
-
-          const auto trk_x = state->get_x() + dr*trk_dxdr;
-          const auto trk_y = state->get_y() + dr*trk_dydr;
-          const auto trk_z = state->get_z() + dr*trk_dzdr;
-
-          const double d = square(trk_x - cluster->get_x()) + square(trk_y - cluster->get_y()) + square(trk_z- cluster->get_z());
-          if( dmin < 0 || d < dmin )
-          {
-            dmin = d;
-            calo_cluster_struct = create_calo_cluster(calo_layer, cluster);
-
-            // add track information
-            calo_cluster_struct._trk_x = trk_x;
-            calo_cluster_struct._trk_y = trk_y;
-            calo_cluster_struct._trk_z = trk_z;
-            calo_cluster_struct._trk_r = get_r( trk_x, trk_y );
-            calo_cluster_struct._trk_phi = std::atan2( trk_y, trk_x );
-            calo_cluster_struct._trk_dr = dr_min;
-          }
-        }
-
-        if( dmin >= 0 )
-        {
-
-          // std::cout << "TrackingEvaluator_hp::evaluate_tracks - calo_layer: " << calo_layer << " dmin: " << dmin << std::endl;
-
-          // store calo cluster
-          track_struct._calo_clusters.push_back( calo_cluster_struct );
-        }
-
+        if( const auto result = find_calo_cluster_hcal(calo_layer,track) )
+        { track_struct._calo_clusters.push_back( result.value() ); }
       }
     }
-
-    if(track_struct._nclusters_micromegas>0 || !(m_flags&MicromegasOnly))
-    {m_container->addTrack( track_struct );}
-
   }
 }
 
@@ -2201,4 +2128,169 @@ void TrackingEvaluator_hp::fill_g4particle_map()
 
   }
 
+}
+
+//_____________________________________________________________
+std::optional<TrackingEvaluator_hp::CaloClusterStruct> TrackingEvaluator_hp::find_calo_cluster_emcal( SvtxTrack* track ) const
+{
+
+  // select EMCAL layer
+  const auto calo_layer = SvtxTrack::CEMC;
+  const auto container( m_rawclustercontainermap.at(calo_layer) );
+  if( !container ) return {};
+
+  // cut on cluster energy
+  const auto min_energy = m_calo_min_energy.at(calo_layer);
+
+  // calo cluster struct
+  TrackingEvaluator_hp::CaloClusterStruct calo_cluster_struct;
+  float dmin = -1;
+
+  for( const auto& [key,cluster]:range_adaptor( container->getClusters()))
+  {
+
+    if( cluster->get_energy() < min_energy ) continue;
+
+    // cluster r
+    const auto cluster_r = get_r(cluster->get_x(),cluster->get_y());
+
+    // find matching state vector
+    float dr_min = -1;
+    auto state_iter = track->begin_states();
+    for( auto iter = state_iter; iter != track->end_states(); ++iter )
+    {
+      const auto dr = std::abs( cluster_r - get_r( iter->second->get_x(), iter->second->get_y() ) );
+      if( dr_min < 0 || dr < dr_min )
+      {
+        state_iter = iter;
+        dr_min = dr;
+      }
+    }
+
+    // no state found
+    if( dr_min < 0 ) continue;
+
+    // calculate distance between track state and cluster
+    const auto& state = state_iter->second;
+
+    // extrapolate track state to same r as cluster and calculate distance
+    // need to extrapolate to the right r
+    const auto trk_r = get_r( state->get_x(), state->get_y() );
+    const auto dr = cluster_r - trk_r;
+
+    const auto trk_drdt = (state->get_x()*state->get_px() + state->get_y()*state->get_py())/trk_r;
+    const auto trk_dxdr = state->get_px()/trk_drdt;
+    const auto trk_dydr = state->get_py()/trk_drdt;
+    const auto trk_dzdr = state->get_pz()/trk_drdt;
+
+    const auto trk_x = state->get_x() + dr*trk_dxdr;
+    const auto trk_y = state->get_y() + dr*trk_dydr;
+    const auto trk_z = state->get_z() + dr*trk_dzdr;
+
+    const double d = square(trk_x - cluster->get_x()) + square(trk_y - cluster->get_y()) + square(trk_z- cluster->get_z());
+    if( dmin < 0 || d < dmin )
+    {
+      dmin = d;
+      calo_cluster_struct = create_calo_cluster(calo_layer, cluster);
+
+      // add track information
+      calo_cluster_struct._trk_x = trk_x;
+      calo_cluster_struct._trk_y = trk_y;
+      calo_cluster_struct._trk_z = trk_z;
+      calo_cluster_struct._trk_r = get_r( trk_x, trk_y );
+      calo_cluster_struct._trk_phi = std::atan2( trk_y, trk_x );
+      calo_cluster_struct._trk_dr = dr_min;
+    }
+  }
+  return dmin < 0 ? std::nullopt : std::optional(calo_cluster_struct);
+}
+
+//_____________________________________________________________
+std::optional<TrackingEvaluator_hp::CaloClusterStruct> TrackingEvaluator_hp::find_calo_cluster_hcal( int calo_layer, SvtxTrack* track ) const
+{
+
+  // get container
+  const auto container( m_rawclustercontainermap.at(calo_layer) );
+  if( !container ) return {};
+
+  // cut on cluster energy
+  const auto min_energy = m_calo_min_energy.at(calo_layer);
+
+  // calo cluster struct
+  TrackingEvaluator_hp::CaloClusterStruct calo_cluster_struct;
+  float dmin = -1;
+
+  for( const auto& [key,cluster]:range_adaptor( container->getClusters()))
+  {
+
+    if( cluster->get_energy() < min_energy ) continue;
+
+    // cluster r
+    const auto cluster_r = get_r(cluster->get_x(),cluster->get_y());
+
+    // find iterators at smaller and larger radius than current cluster
+    bool found = false;
+    auto state_iter_before = track->begin_states();
+    auto state_iter_after = track->begin_states();
+
+    for( auto iter = state_iter_before; iter != track->end_states(); ++iter )
+    {
+      const auto& track_state( iter->second );
+
+      // get track state radius and compare
+      const auto state_r =  get_r( track_state->get_x(), track_state->get_y() );
+      if( state_r < cluster_r )
+      {
+        state_iter_before = iter;
+      } else if( state_r > cluster_r ) {
+        state_iter_after = iter;
+        found = true;
+        break;
+      }
+    }
+
+    // no state found
+    if( !found ) continue;
+
+    // calculate distance between track state and cluster
+    const auto& state_before = state_iter_before->second;
+    const auto& state_after = state_iter_after->second;
+
+    const auto state_r_before = get_r( state_before->get_x(), state_before->get_y() );
+    const auto state_r_after = get_r( state_after->get_x(), state_after->get_y() );
+
+    const TVector3 position_before( state_before->get_x(),  state_before->get_y(),  state_before->get_z() );
+    const TVector3 position_after( state_after->get_x(),  state_after->get_y(),  state_after->get_z() );
+    const TVector3 position_cluster( cluster->get_x(),  cluster->get_y(),  cluster->get_z() );
+
+    // find point closest to the cluster along the track
+    const TVector3 track_vector = position_after-position_before;
+    const TVector3 clus_vector = position_cluster-position_before;
+    const auto lambda = clus_vector.Dot(track_vector)/track_vector.Mag2();
+
+    std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
+      << " calo_layer: " << calo_layer
+      << " cluster_r: " << cluster_r
+      << " state_r_before: " << state_r_before
+      << " state_r_after: " << state_r_after
+      << " lambda: " << lambda
+      << std::endl;
+
+    const TVector3 position_closest = position_before*(1.-lambda) + position_after*lambda;
+    const auto d = (position_closest-position_cluster).Mag2();
+    if( dmin < 0 || d < dmin )
+    {
+      dmin = d;
+      calo_cluster_struct = create_calo_cluster(calo_layer, cluster);
+
+      // add track information
+      calo_cluster_struct._trk_x = position_closest.x();
+      calo_cluster_struct._trk_y = position_closest.y();
+      calo_cluster_struct._trk_z = position_closest.z();
+      calo_cluster_struct._trk_r = get_r( calo_cluster_struct._trk_x, calo_cluster_struct._trk_y );
+      calo_cluster_struct._trk_phi = std::atan2( calo_cluster_struct._trk_y, calo_cluster_struct._trk_x );
+      calo_cluster_struct._trk_dr = 0;
+    }
+  }
+  return dmin < 0 ? std::nullopt : std::optional(calo_cluster_struct);
 }
