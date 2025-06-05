@@ -58,6 +58,9 @@ class SimEvaluator_hp : public SubsysReco
     // number of primary g4 particles with pt > 0.5 GeV
     int _nparticles = 0;
 
+    // id of the main (== primary) vertex
+    int _main_vertex_id = 0;
+
   };
 
   // vertex information

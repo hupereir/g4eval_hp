@@ -365,6 +365,11 @@ void SimEvaluator_hp::fill_event()
   // count number of primary particles with pt > 0.5
   if( m_g4truthinfo )
   {
+
+    // get main vertex id
+    event._main_vertex_id = m_g4truthinfo->GetPrimaryVertexIndex();
+
+    // loop over particles
     for( const auto& [id, particle]:range_adaptor(m_g4truthinfo->GetPrimaryParticleRange()) )
     {
       if( !particle ) continue;
