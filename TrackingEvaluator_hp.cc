@@ -1254,6 +1254,10 @@ void TrackingEvaluator_hp::evaluate_tracks()
         { track_struct._calo_clusters.push_back( result.value() ); }
       }
     }
+
+    if(track_struct._nclusters_micromegas>0 || !(m_flags&MicromegasOnly))
+    {m_container->addTrack( track_struct );}
+
   }
 }
 
