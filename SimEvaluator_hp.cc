@@ -120,6 +120,7 @@ namespace
   SimEvaluator_hp::VertexStruct create_vertex( PHG4VtxPoint* vertex )
   {
     SimEvaluator_hp::VertexStruct vertexStruct;
+    vertexStruct._id = vertex->get_id();
     vertexStruct._x = vertex->get_x();
     vertexStruct._y = vertex->get_y();
     vertexStruct._z = vertex->get_z();
@@ -135,6 +136,8 @@ namespace
     particleStruct._parent_id = particle->get_parent_id();
     particleStruct._primary_id = particle->get_primary_id();
     particleStruct._pid = particle->get_pid();
+
+    particleStruct._vtx_id = particle->get_vtx_id();
 
     // assign charge
     auto pdgParticle = TDatabasePDG::Instance()->GetParticle(particleStruct._pid);
@@ -426,6 +429,16 @@ void SimEvaluator_hp::fill_particles()
   {
     if( !particle ) continue;
     auto particleStruct = create_particle( particle );
+
+    // vertex
+    auto vtx = m_g4truthinfo->GetVtx(particle->get_vtx_id());
+    if( vtx )
+    {
+      particleStruct._x = vtx->get_x();
+      particleStruct._y = vtx->get_y();
+      particleStruct._z = vtx->get_z();
+      particleStruct._t = vtx->get_t();
+    }
 
     // embed index
     particleStruct._embed = get_embed( particle );

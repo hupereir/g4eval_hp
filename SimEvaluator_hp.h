@@ -66,10 +66,19 @@ class SimEvaluator_hp : public SubsysReco
     public:
     using List = std::vector<VertexStruct>;
     int _embed = 0;
+
+    //! vertex id
+    int _id = 0;
+
+    //!@name vertex position
+    //@{
     float _x = 0;
     float _y = 0;
     float _z = 0;
     float _t = 0;
+    //@}
+
+    //! true if this is the main (primary) vertex
     bool _is_main_vertex = false;
   };
 
@@ -80,14 +89,41 @@ class SimEvaluator_hp : public SubsysReco
     using List = std::vector<ParticleStruct>;
 
     int _charge = 0;
+
+    //! particle id
     int _pid = 0;
+
+    //! embeding id
     int _embed = 0;
+
+    //! track id
     int _trkid = 0;
+
+    //! track id of the parent particle
     int _parent_id = 0;
+
+    //! track id of the primary particle
     int _primary_id = 0;
+
+    //! vertex id
+    int _vtx_id = 0;
+
+    //! true if particle is a primary particle
     bool _is_primary = false;
+
+    //! detector mask
     int64_t _mask = 0;
 
+    //!@name origin
+    //@{
+    float _x = 0;
+    float _y = 0;
+    float _z = 0;
+    float _t = 0;
+    //@}
+
+    //!@name momentum and energy
+    //@{
     float _px = 0;
     float _py = 0;
     float _pz = 0;
@@ -95,6 +131,7 @@ class SimEvaluator_hp : public SubsysReco
     float _p = 0;
     float _e = 0;
     float _eta = 0;
+    //@}
 
   };
 
