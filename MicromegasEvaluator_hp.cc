@@ -150,7 +150,11 @@ int MicromegasEvaluator_hp::Init(PHCompositeNode* topNode )
     dstNode->addNode(evalNode);
   }
 
+  // overwrite split level for easier offline browsing
   auto newNode = new PHIODataNode<PHObject>( new Container, "MicromegasEvaluator_hp::Container","PHObject");
+
+  // overwrite split level for easier offline browsing
+  newNode->SplitLevel(99);
   evalNode->addNode(newNode);
 
   return Fun4AllReturnCodes::EVENT_OK;

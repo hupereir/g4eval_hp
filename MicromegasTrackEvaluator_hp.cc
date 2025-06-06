@@ -276,7 +276,11 @@ int MicromegasTrackEvaluator_hp::Init(PHCompositeNode* topNode )
     dstNode->addNode(evalNode);
   }
 
+  // add container to output tree
   auto newNode = new PHIODataNode<PHObject>( new Container, "MicromegasTrackEvaluator_hp::Container","PHObject");
+
+  // overwrite split level for easier offline browsing
+  newNode->SplitLevel(99);
   evalNode->addNode(newNode);
 
   return Fun4AllReturnCodes::EVENT_OK;
