@@ -45,6 +45,7 @@
 #include <trackbase_historic/SvtxTrack.h>
 #include <trackbase_historic/SvtxTrackMap.h>
 #include <trackbase_historic/TrackSeedContainer.h>
+#include <trackbase_historic/TrackSeedHelper.h>
 
 #include <TVector3.h>
 
@@ -372,6 +373,23 @@ namespace
     cm_cluster_struct._phi = std::atan2(cluster->getY(), cluster->getX());
 
     return cm_cluster_struct;
+  }
+
+  //! create track struct from struct from svx track
+  TrackingEvaluator_hp::SeedStruct create_seed( TrackSeed* seed )
+  {
+    TrackingEvaluator_hp::SeedStruct seedStruct;
+
+    const auto pos = TrackSeedHelper::get_xyz(seed);
+
+    // fill additional information
+    seedStruct._x = pos.x();
+    seedStruct._y = pos.y();
+    seedStruct._z = pos.z();
+    seedStruct._r = get_r(seedStruct._x, seedStruct._y );
+    seedStruct._phi = seed->get_phi();
+    seedStruct._eta = seed->get_eta();
+    return seedStruct;
   }
 
   //! create track struct from struct from svx track
@@ -1065,6 +1083,26 @@ void TrackingEvaluator_hp::evaluate_tracks()
   {
     // create track information
     auto track_struct = create_track( track );
+
+    {
+      // silicon seed information
+      auto si_seed = track->get_silicon_seed();
+      if(si_seed)
+      {
+        track_struct._has_si_seed = true;
+        track_struct._si_seed = create_seed(si_seed);
+      }
+    }
+
+    {
+      // tpc seed information
+      auto tpc_seed = track->get_tpc_seed();
+      if(tpc_seed)
+      {
+        track_struct._has_tpc_seed = true;
+        track_struct._tpc_seed = create_seed(tpc_seed);
+      }
+    }
 
     // truth information
     const auto [id,contributors] = get_max_contributor( track );

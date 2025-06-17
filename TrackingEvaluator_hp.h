@@ -293,6 +293,22 @@ class TrackingEvaluator_hp : public SubsysReco
     //@}
   };
 
+  // seed
+  class SeedStruct
+  {
+    public:
+
+    explicit SeedStruct() = default;
+
+    float _x = 0;
+    float _y = 0;
+    float _z = 0;
+    float _r = 0;
+
+    float _eta = 0;
+    float _phi = 0;
+  };
+
   // track information to be stored in tree
   class TrackStruct
   {
@@ -382,6 +398,15 @@ class TrackingEvaluator_hp : public SubsysReco
     // dedx in TPC using truth information (not sure how to calculate)
     float _truth_dedx = 0;
 
+    //@}
+
+    //!@name seed information
+    //@{
+    bool _has_si_seed = false;
+    SeedStruct _si_seed;
+
+    bool _has_tpc_seed = false;
+    SeedStruct _tpc_seed;
     //@}
 
     // associate clusters
