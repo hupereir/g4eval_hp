@@ -181,7 +181,7 @@ int MicromegasClusterEvaluator_hp::load_nodes( PHCompositeNode* topNode )
 
   // mbd
   m_mbd = findNode::getClass<MbdOut>(topNode, "MbdOut");
-  if( !m_mbd ) { std::cout << "MicromegasClusterEvaluator_hp::load_nodes - MbdOut not found" << std::endl; }
+  // if( !m_mbd ) { std::cout << "MicromegasClusterEvaluator_hp::load_nodes - MbdOut not found" << std::endl; }
 
   // local container
   m_container = findNode::getClass<Container>(topNode, "MicromegasClusterEvaluator_hp::Container");
