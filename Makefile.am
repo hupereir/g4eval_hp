@@ -41,6 +41,7 @@ pkginclude_HEADERS = \
   MicromegasEvaluator_hp.h \
   MicromegasGeometryContainer.h \
   MicromegasTrackEvaluator_hp.h \
+  PHTrackPruner.h \
   SimEvaluator_hp.h \
   TrackingEvaluator_hp.h
 
@@ -68,6 +69,7 @@ libg4eval_hp_la_SOURCES = \
   MicromegasEvaluator_hp.cc \
   MicromegasGeometryContainer.cc \
   MicromegasTrackEvaluator_hp.cc \
+  PHTrackPruner.cc \
   SimEvaluator_hp.cc \
   TrackingEvaluator_hp.cc
 
