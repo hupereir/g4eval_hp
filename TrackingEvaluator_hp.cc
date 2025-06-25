@@ -1099,8 +1099,30 @@ void TrackingEvaluator_hp::evaluate_tracks()
       auto tpc_seed = track->get_tpc_seed();
       if(tpc_seed)
       {
+        const auto tpc_seed_struct = create_seed(tpc_seed);
+
+//         // create extrapolated tpc seed
+//         auto tpc_seed_extrap = tpc_seed_struct;
+//         if( track_struct._has_si_seed )
+//         {
+//           const auto dr = track_struct._si_seed._r - tpc_seed_struct._r;
+// //           const auto seed_drdt = (tpc_seed_struct._x*tpc_seed->get_px() + tpc_seed_struct._y*tpc_seed->get_py())/tpc_seed_struct._r;
+// //           const auto seed_dxdr = tpc_seed->get_px()/seed_drdt;
+// //           const auto seed_dydr = tpc_seed->get_py()/seed_drdt;
+// //           const auto seed_dzdr = tpc_seed->get_pz()/seed_drdt;
+// //
+// //           tpc_seed_extrap._x = tpc_seed_struct._x + dr*seed_dxdr;
+// //           tpc_seed_extrap._y = tpc_seed_struct._y + dr*seed_dydr;
+// //           tpc_seed_extrap._z = tpc_seed_struct._z + dr*seed_dzdr;
+// //           tpc_seed_extrap._r = get_r( tpc_seed_extrap._x, tpc_seed_extrap._y);
+// //           tpc_seed_extrap._z = tpc_seed_struct._z + dr/std::tan(tpc_seed->get_theta());
+//           tpc_seed_extrap._z = tpc_seed_struct._z - dr/std::tan(tpc_seed->get_theta());
+//         }
+
+        // assign
         track_struct._has_tpc_seed = true;
-        track_struct._tpc_seed = create_seed(tpc_seed);
+        track_struct._tpc_seed = std::move(tpc_seed_struct);
+//         track_struct._tpc_seed_extrap = std::move(tpc_seed_extrap);
       }
     }
 

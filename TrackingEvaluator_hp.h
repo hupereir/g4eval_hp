@@ -70,7 +70,6 @@ class TrackingEvaluator_hp : public SubsysReco
         _nhits[i] = 0;
         _nhits_raw[i] = 0;
         _nclusters[i] = 0;
-
       }
     }
 
@@ -402,11 +401,16 @@ class TrackingEvaluator_hp : public SubsysReco
 
     //!@name seed information
     //@{
+    //! silicon seed
     bool _has_si_seed = false;
     SeedStruct _si_seed;
 
+    //! tpc seed
     bool _has_tpc_seed = false;
     SeedStruct _tpc_seed;
+
+//     //! tpc seed extrapolated to the same radius as the silicon seed
+//     SeedStruct _tpc_seed_extrap;
     //@}
 
     // associate clusters
