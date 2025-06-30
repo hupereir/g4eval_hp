@@ -327,7 +327,6 @@ int MicromegasTrackEvaluator_hp::load_nodes( PHCompositeNode* topNode )
 
   // hitset container
   m_hitsetcontainer = findNode::getClass<TrkrHitSetContainer>(topNode, "TRKR_HITSET");
-  assert(m_hitsetcontainer);
 
   // cluster map
   m_cluster_map = findNode::getClass<TrkrClusterContainer>(topNode, "TRKR_CLUSTER");
@@ -335,7 +334,6 @@ int MicromegasTrackEvaluator_hp::load_nodes( PHCompositeNode* topNode )
 
   // cluster hit association map
   m_cluster_hit_map = findNode::getClass<TrkrClusterHitAssoc>(topNode, "TRKR_CLUSTERHITASSOC");
-  assert( m_cluster_hit_map );
 
   // local container
   m_container = findNode::getClass<Container>(topNode, "MicromegasTrackEvaluator_hp::Container");
@@ -645,47 +643,52 @@ MicromegasTrackEvaluator_hp::ClusterStruct MicromegasTrackEvaluator_hp::create_c
 
   cluster_struct._layer = TrkrDefs::getLayer(cluster_key);
   cluster_struct._tile = MicromegasDefs::getTileId(cluster_key);
+  cluster_struct._size = cluster->getSize();
 
-  // find associated hits
-  const auto range = m_cluster_hit_map->getHits(cluster_key);
-  cluster_struct._size = std::distance( range.first, range.second );
-
-  /// Get the upper 32 bits from cluster keys
-  const auto hitsetkey = TrkrDefs::getHitSetKeyFromClusKey(cluster_key);
-
-  // get hits from hitset map
-  const auto hitset = m_hitsetcontainer->findHitSet(hitsetkey);
-
-  // loop over assiciated hits
-  unsigned int adc_max = 0;
-  for( auto iter = range.first; iter != range.second; ++iter )
+  if( m_cluster_hit_map && m_hitsetcontainer )
   {
-    const auto& [key,hitkey] = *iter;
-    assert( key == cluster_key );
 
-    // get strip
-    const auto strip = MicromegasDefs::getStrip( hitkey );
+    // get associated hits
+    const auto range = m_cluster_hit_map->getHits(cluster_key);
+    cluster_struct._size = std::distance( range.first, range.second );
 
-    // get associated hit
-    const auto hit = hitset->getHit( hitkey );
-    assert( hit );
+    /// Get the upper 32 bits from cluster keys
+    const auto hitsetkey = TrkrDefs::getHitSetKeyFromClusKey(cluster_key);
 
-    const auto adc = hit->getAdc();
-    if( adc > adc_max )
+    // get hits from hitset map
+    const auto hitset = m_hitsetcontainer->findHitSet(hitsetkey);
+
+    // loop over assiciated hits
+    unsigned int adc_max = 0;
+    for( auto iter = range.first; iter != range.second; ++iter )
     {
-      adc_max = adc;
-      cluster_struct._strip = strip;
+      const auto& [key,hitkey] = *iter;
+      assert( key == cluster_key );
+
+      // get strip
+      const auto strip = MicromegasDefs::getStrip( hitkey );
+
+      // get associated hit
+      const auto hit = hitset->getHit( hitkey );
+      assert( hit );
+
+      const auto adc = hit->getAdc();
+      if( adc > adc_max )
+      {
+        adc_max = adc;
+        cluster_struct._strip = strip;
+      }
+
+      // get adc, remove pedestal, increment total charge
+      const double pedestal = m_use_default_pedestal ?
+        m_default_pedestal:
+        m_calibration_data.get_pedestal_mapped(hitsetkey, strip);
+      cluster_struct._charge += (adc-pedestal);
     }
 
-    // get adc, remove pedestal, increment total charge
-    const double pedestal = m_use_default_pedestal ?
-      m_default_pedestal:
-      m_calibration_data.get_pedestal_mapped(hitsetkey, strip);
-    cluster_struct._charge += (adc-pedestal);
+    // cluster region
+    cluster_struct._region = cluster_struct._strip/64;
   }
-
-  // cluster region
-  cluster_struct._region = cluster_struct._strip/64;
 
   // local position
   cluster_struct._x_local = cluster->getLocalX();
