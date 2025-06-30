@@ -345,6 +345,8 @@ class TrackingEvaluator_hp : public SubsysReco
     unsigned int _nclusters_intt = 0;
     unsigned int _nclusters_tpc = 0;
     unsigned int _nclusters_micromegas = 0;
+    unsigned int _nclusters_micromegas_phi = 0;
+    unsigned int _nclusters_micromegas_z = 0;
 
     /// number of track states on track
     unsigned int _nstates = 0;
@@ -619,7 +621,24 @@ class TrackingEvaluator_hp : public SubsysReco
   void set_calo_min_energy( int layer, double value )
   { m_calo_min_energy[layer] = value; }
 
-  //! utility functions
+  //!@name tweak which distortion corrections are applied
+  //@{
+  void disable_module_edge_correction()
+  { m_globalPositionWrapper.set_enable_module_edge_corr(false); }
+
+  void disable_static_correction()
+  { m_globalPositionWrapper.set_enable_static_corr(false); }
+
+  void disable_average_correction()
+  { m_globalPositionWrapper.set_enable_average_corr(false); }
+
+  void disable_fluctuation_correction()
+  { m_globalPositionWrapper.set_enable_fluctuation_corr(false); }
+  //@}
+
+  //!@name utility functions
+  //@{
+  //! tells if a given layer is in a layer bitwise mask
   static bool has_layer( int64_t mask, int layer )
   { return mask & (1LL<<layer); }
 
@@ -648,6 +667,7 @@ class TrackingEvaluator_hp : public SubsysReco
   //! get number of micromegas clusters from mask
   static int get_nclusters_micromegas( int64_t mask )
   { return get_nclusters( mask, 55, 57 ); }
+  //@}
 
   private:
 

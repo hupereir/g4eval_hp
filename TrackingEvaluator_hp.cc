@@ -292,6 +292,22 @@ namespace
       []( const TrkrDefs::cluskey& key ) { return TrkrDefs::getTrkrId(key) == type; } );
   }
 
+  //! return number of clusters of a given type
+  int get_clusters_micromegas_phi( SvtxTrack* track )
+  {
+    const auto cluster_keys = get_cluster_keys( track );
+    return std::count_if( cluster_keys.begin(), cluster_keys.end(),
+      []( const TrkrDefs::cluskey& key ) { return TrkrDefs::getLayer(key) == 55; } );
+  }
+
+  //! return number of clusters of a given type
+  int get_clusters_micromegas_z( SvtxTrack* track )
+  {
+    const auto cluster_keys = get_cluster_keys( track );
+    return std::count_if( cluster_keys.begin(), cluster_keys.end(),
+      []( const TrkrDefs::cluskey& key ) { return TrkrDefs::getLayer(key) == 56; } );
+  }
+
   //! return number of states of a given type
   template<int type>
     int get_states( SvtxTrack* track )
@@ -401,6 +417,9 @@ namespace
     fill_track_struct( trackStruct, track );
 
     // fill additional information
+    trackStruct._nclusters_micromegas_phi = get_clusters_micromegas_phi( track );
+    trackStruct._nclusters_micromegas_z = get_clusters_micromegas_z( track );
+
     trackStruct._x = track->get_x();
     trackStruct._y = track->get_y();
     trackStruct._z = track->get_z();
