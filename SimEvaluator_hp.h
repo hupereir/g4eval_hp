@@ -136,6 +136,11 @@ class SimEvaluator_hp : public SubsysReco
     float _eta = 0;
     //@}
 
+    //! pid of the parent particle
+    int _parent_pid = 0;
+
+    //! pid of the parent primary particle
+    int _primary_pid = 0;
   };
 
   // particle information

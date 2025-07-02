@@ -439,6 +439,18 @@ void SimEvaluator_hp::fill_particles()
     if( !particle ) continue;
     auto particleStruct = create_particle( particle );
 
+    {
+      // parent pid
+      auto particle =  m_g4truthinfo->GetParticle( particleStruct._parent_id );
+      if( particle ) particleStruct._parent_pid = particle->get_pid();
+    }
+
+    {
+      // primary pid
+      auto particle =  m_g4truthinfo->GetParticle( particleStruct._primary_id );
+      if( particle ) particleStruct._primary_pid = particle->get_pid();
+    }
+
     // vertex
     auto vtx = m_g4truthinfo->GetVtx(particle->get_vtx_id());
     if( vtx )
