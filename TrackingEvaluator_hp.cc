@@ -699,6 +699,10 @@ int TrackingEvaluator_hp::InitRun(PHCompositeNode* topNode)
     m_tpcClusterMover.initialize_geometry(geom);
   }
 
+  // print micromegas geometry
+  load_nodes(topNode);
+  print_micromegas_geometry();
+
   return Fun4AllReturnCodes::EVENT_OK;
 }
 
@@ -2380,4 +2384,29 @@ std::optional<TrackingEvaluator_hp::CaloClusterStruct> TrackingEvaluator_hp::fin
     }
   }
   return dmin < 0 ? std::nullopt : std::optional(calo_cluster_struct);
+}
+
+//_____________________________________________________________________-
+void TrackingEvaluator_hp::print_micromegas_geometry()
+{
+   // loop over layers
+  const auto [begin,end] = m_micromegas_geom_container->get_begin_end();
+  for( auto iter = begin; iter != end; ++iter )
+  {
+
+    // get layer geometry object
+    auto layergeom = dynamic_cast<CylinderGeomMicromegas*>(iter->second);
+
+    // get layer
+    const unsigned int layer = layergeom->get_layer();
+
+    // loop over tiles
+    const unsigned int tile_count = layergeom->get_tiles_count();
+    for( unsigned int tileid = 0; tileid < tile_count; ++tileid )
+    {
+      // get tile center and print
+      const auto center = layergeom->get_world_from_local_coords( tileid, m_tGeometry, {0,0} );
+      std::cout << "TrackingEvaluator_hp::print_micromegas_geometry - layer: " << layer << " tile: " << tileid << " center: {" << center.x() << "," << center.y() << "," << center.z() << "}" << std::endl;
+    }
+  }
 }

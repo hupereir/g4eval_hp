@@ -740,7 +740,6 @@ class TrackingEvaluator_hp : public SubsysReco
    */
   void add_truth_information_micromegas( ClusterStruct&, std::set<PHG4Hit*> ) const;
 
-
   //! fill MC track map
   void fill_g4particle_map();
 
@@ -749,6 +748,9 @@ class TrackingEvaluator_hp : public SubsysReco
 
   //! calculate dedx from g4hits only
   float get_truth_dedx( TrackSeed*, int) const;
+
+  //! print micromegas geometry
+  void print_micromegas_geometry();
 
   //! find calorimeter cluster matching track
   std::optional<CaloClusterStruct> find_calo_cluster_emcal( SvtxTrack* ) const;
