@@ -1352,7 +1352,7 @@ void TrackingEvaluator_hp::evaluate_tracks()
       { track_struct._calo_clusters.push_back( result.value() ); }
 
       // calorimeter extrapolation
-      for(const auto& calo_layer:{SvtxTrack::HCALIN, SvtxTrack::HCALOUT})
+      for(const auto& calo_layer:std::initializer_list<int>{SvtxTrack::HCALIN, SvtxTrack::HCALOUT, TOPO_HCAL})
       {
         if( const auto result = find_calo_cluster_hcal(calo_layer,track) )
         { track_struct._calo_clusters.push_back( result.value() ); }
@@ -2244,6 +2244,8 @@ std::optional<TrackingEvaluator_hp::CaloClusterStruct> TrackingEvaluator_hp::fin
 
   // select EMCAL layer
   const auto calo_layer = SvtxTrack::CEMC;
+  if( m_rawclustercontainermap.find(calo_layer) == m_rawclustercontainermap.end() ) { return {}; }
+
   const auto container( m_rawclustercontainermap.at(calo_layer) );
   if( !container ) return {};
 
@@ -2321,6 +2323,11 @@ std::optional<TrackingEvaluator_hp::CaloClusterStruct> TrackingEvaluator_hp::fin
 //_____________________________________________________________
 std::optional<TrackingEvaluator_hp::CaloClusterStruct> TrackingEvaluator_hp::find_calo_cluster_hcal( int calo_layer, SvtxTrack* track ) const
 {
+
+  std::cout << "TrackingEvaluator_hp::find_calo_cluster_hcal- layer: " << calo_layer << std::endl;
+
+  // check layer
+  if( m_rawclustercontainermap.find(calo_layer) == m_rawclustercontainermap.end() ) { return {}; }
 
   // get container
   const auto container( m_rawclustercontainermap.at(calo_layer) );
