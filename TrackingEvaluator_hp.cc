@@ -74,16 +74,33 @@ namespace
   template<class T> inline constexpr T square( const T& x ) { return x*x; }
 
   //! radius
-  template<class T> inline constexpr T get_r( T x, T y ) { return std::sqrt( square(x) + square(y) ); }
+  template<class T> inline constexpr T get_r( const T& x, const T& y ) { return std::sqrt( square(x) + square(y) ); }
 
   //! pt
-  template<class T> T get_pt( T px, T py ) { return std::sqrt( square(px) + square(py) ); }
+  template<class T> T get_pt( const T& px, const T& py ) { return std::sqrt( square(px) + square(py) ); }
 
   //! p
-  template<class T> T get_p( T px, T py, T pz ) { return std::sqrt( square(px) + square(py) + square(pz) ); }
+  template<class T> T get_p( const T& px, const T& py, const T& pz ) { return std::sqrt( square(px) + square(py) + square(pz) ); }
 
   //! eta
-  template<class T> T get_eta( T p, T pz ) { return std::log( (p+pz)/(p-pz) )/2; }
+  template<class T> T get_eta( const T& p, const T& pz ) { return std::log( (p+pz)/(p-pz) )/2; }
+
+  //! eta
+  template<class T> T get_eta( const T& px, const T& py, const T& pz )
+  {
+    const auto p = get_p(px,py,pz);
+    return get_eta(p,pz);
+  }
+
+
+  //! delta phi with proper rounding
+  template<class T>
+  T delta_phi( T phi )
+  {
+    while( phi >= M_PI ) {phi -= 2*M_PI; }
+    while( phi <-M_PI ) {phi += 2*M_PI; }
+    return phi;
+  }
 
   //! map calorimeter names to layer type
   // using calo_names_map_t = std::map<SvtxTrack::CAL_LAYER, std::string>;
@@ -2290,7 +2307,12 @@ std::optional<TrackingEvaluator_hp::CaloClusterStruct> TrackingEvaluator_hp::fin
       calo_cluster_struct._trk_z = trk_z;
       calo_cluster_struct._trk_r = get_r( trk_x, trk_y );
       calo_cluster_struct._trk_phi = std::atan2( trk_y, trk_x );
+
       calo_cluster_struct._trk_dr = dr_min;
+      calo_cluster_struct._trk_dphi = delta_phi( calo_cluster_struct._phi-calo_cluster_struct._trk_phi);
+      calo_cluster_struct._trk_deta =
+        get_eta(calo_cluster_struct._x,calo_cluster_struct._y,calo_cluster_struct._z)-
+        get_eta(calo_cluster_struct._trk_x,calo_cluster_struct._trk_y,calo_cluster_struct._trk_z);
     }
   }
   return dmin < 0 ? std::nullopt : std::optional(calo_cluster_struct);
