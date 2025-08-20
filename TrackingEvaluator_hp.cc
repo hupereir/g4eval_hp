@@ -374,6 +374,7 @@ namespace
 
     calo_cluster_struct._r = get_r( calo_cluster_struct._x, calo_cluster_struct._y );
     calo_cluster_struct._phi = std::atan2( calo_cluster_struct._y, calo_cluster_struct._x );
+    calo_cluster_struct._eta = get_eta( calo_cluster_struct._x,calo_cluster_struct._y,calo_cluster_struct._z );
 
     calo_cluster_struct._e = cluster->get_energy();
     calo_cluster_struct._chisquare = cluster->get_chi2();
@@ -1036,29 +1037,11 @@ void TrackingEvaluator_hp::evaluate_event()
 void TrackingEvaluator_hp::evaluate_clusters()
 {
 
-  if(!(m_cluster_map&&m_hitsetcontainer&&m_container)) return;
+  if(!(m_cluster_map&&m_container)) return;
 
   // clear array
   m_container->clearClusters();
-
-  // print total hits in TPC
-  if( false )
-  {
-    int n_tpc_hits = 0;
-    int n_tpc_clusters = 0;
-    for( const auto& [hitsetkey,hitset]:range_adaptor( m_hitsetcontainer->getHitSets( TrkrDefs::tpcId )))
-    {
-      n_tpc_hits += hitset->size();
-      const auto range = m_cluster_map->getClusters(hitsetkey);
-      n_tpc_clusters += std::distance( range.first, range.second );
-    }
-
-    std::cout << "TrackingEvaluator_hp::evaluate_clusters - n_tpc_hits: " << n_tpc_hits << std::endl;
-    std::cout << "TrackingEvaluator_hp::evaluate_clusters - n_tpc_clusters: " << n_tpc_clusters << std::endl;
-  }
-
-  // first loop over hitsets
-  for( const auto& [hitsetkey,hitset]:range_adaptor(m_hitsetcontainer->getHitSets()))
+  for( const auto& hitsetkey:m_cluster_map->getHitSetKeys() )
   {
     for( const auto& [key,cluster]:range_adaptor(m_cluster_map->getClusters(hitsetkey)))
     {
@@ -1510,9 +1493,6 @@ void TrackingEvaluator_hp::print_cluster( TrkrDefs::cluskey ckey, TrkrCluster* c
       << std::endl;
 
   }
-
-  // std::cout << std::endl;
-
 }
 
 //_____________________________________________________________________
@@ -1525,36 +1505,39 @@ void TrackingEvaluator_hp::print_track(SvtxTrack* track) const
 
   // print track position and momentum
   std::cout << "TrackingEvaluator_hp::print_track - id: " << track->get_id() << std::endl;
+  std::cout << "TrackingEvaluator_hp::print_track - crossing: " << track->get_crossing() << std::endl;
   std::cout << "TrackingEvaluator_hp::print_track - position: (" << track->get_x() << ", " << track->get_y() << ", " << track->get_z() << ")" << std::endl;
   std::cout << "TrackingEvaluator_hp::print_track - momentum: (" << track->get_px() << ", " << track->get_py() << ", " << track->get_pz() << ")" << std::endl;
   std::cout << "TrackingEvaluator_hp::print_track - clusters: " << get_cluster_keys( track ).size() << ", states: " << track->size_states() << std::endl;
 
-  std::cout << "TrackingEvaluator_hp::print_track - silicon seed id: " << track->get_silicon_seed() << std::endl;
-  std::cout << "TrackingEvaluator_hp::print_track - tpc seed id: " << track->get_tpc_seed() << std::endl;
+//   std::cout << "TrackingEvaluator_hp::print_track - silicon seed id: " << track->get_silicon_seed() << std::endl;
+//   std::cout << "TrackingEvaluator_hp::print_track - tpc seed id: " << track->get_tpc_seed() << std::endl;
   std::cout << " MVTX cluster keys: " << get_detector_cluster_keys<TrkrDefs::mvtxId>(track) << std::endl;
-
   std::cout << " INTT cluster keys: " << get_detector_cluster_keys<TrkrDefs::inttId>(track) << std::endl;
   std::cout << " TPOT cluster keys: " << get_detector_cluster_keys<TrkrDefs::micromegasId>(track) << std::endl;
   std::cout << " TPC cluster keys: " << get_detector_cluster_keys<TrkrDefs::tpcId>(track) << std::endl;
 
   // print MVTX cluster keys
-  for( const auto ckey:get_detector_cluster_keys<TrkrDefs::mvtxId>(track) )
+  if( false )
   {
-    // get cluster from map
-    if( m_cluster_map )
+    for( const auto ckey:get_detector_cluster_keys<TrkrDefs::mvtxId>(track) )
     {
-      auto cluster = m_cluster_map->findCluster( ckey );
-      std::cout << " MVTX cluster: " << ckey
-        << " position: (" << cluster->getLocalX() << ", " << cluster->getLocalY() << ")"
-        << " size: " << (int)cluster->getSize()
-        << " layer: " << (int)TrkrDefs::getLayer(ckey)
-        << " stave: " << (int) MvtxDefs::getStaveId(ckey)
-        << " chip: " << (int)MvtxDefs::getChipId(ckey)
-        << " strobe: " << (int)MvtxDefs::getStrobeId(ckey)
-        << " index: " << (int)TrkrDefs::getClusIndex(ckey)
-        << std::endl;
-    } else {
-      std::cout << " MVTX cluster: " << ckey << " stave: " << (int) MvtxDefs::getStaveId(ckey) << " chip: " << (int)MvtxDefs::getChipId(ckey) << " strobe: " << (int)MvtxDefs::getStrobeId(ckey) << std::endl;
+      // get cluster from map
+      if( m_cluster_map )
+      {
+        auto cluster = m_cluster_map->findCluster( ckey );
+        std::cout << " MVTX cluster: " << ckey
+          << " position: (" << cluster->getLocalX() << ", " << cluster->getLocalY() << ")"
+          << " size: " << (int)cluster->getSize()
+          << " layer: " << (int)TrkrDefs::getLayer(ckey)
+          << " stave: " << (int) MvtxDefs::getStaveId(ckey)
+          << " chip: " << (int)MvtxDefs::getChipId(ckey)
+          << " strobe: " << (int)MvtxDefs::getStrobeId(ckey)
+          << " index: " << (int)TrkrDefs::getClusIndex(ckey)
+          << std::endl;
+      } else {
+        std::cout << " MVTX cluster: " << ckey << " stave: " << (int) MvtxDefs::getStaveId(ckey) << " chip: " << (int)MvtxDefs::getChipId(ckey) << " strobe: " << (int)MvtxDefs::getStrobeId(ckey) << std::endl;
+      }
     }
   }
 
@@ -2311,10 +2294,7 @@ std::optional<TrackingEvaluator_hp::CaloClusterStruct> TrackingEvaluator_hp::fin
       calo_cluster_struct._trk_phi = std::atan2( trk_y, trk_x );
 
       calo_cluster_struct._trk_dr = dr_min;
-      calo_cluster_struct._trk_dphi = delta_phi( calo_cluster_struct._phi-calo_cluster_struct._trk_phi);
-      calo_cluster_struct._trk_deta =
-        get_eta(calo_cluster_struct._x,calo_cluster_struct._y,calo_cluster_struct._z)-
-        get_eta(calo_cluster_struct._trk_x,calo_cluster_struct._trk_y,calo_cluster_struct._trk_z);
+      calo_cluster_struct._trk_eta = get_eta(calo_cluster_struct._trk_x,calo_cluster_struct._trk_y,calo_cluster_struct._trk_z);
     }
   }
   return dmin < 0 ? std::nullopt : std::optional(calo_cluster_struct);
@@ -2409,6 +2389,7 @@ std::optional<TrackingEvaluator_hp::CaloClusterStruct> TrackingEvaluator_hp::fin
       calo_cluster_struct._trk_z = position_closest.z();
       calo_cluster_struct._trk_r = get_r( calo_cluster_struct._trk_x, calo_cluster_struct._trk_y );
       calo_cluster_struct._trk_phi = std::atan2( calo_cluster_struct._trk_y, calo_cluster_struct._trk_x );
+      calo_cluster_struct._trk_eta = get_eta(calo_cluster_struct._trk_x,calo_cluster_struct._trk_y,calo_cluster_struct._trk_z);
       calo_cluster_struct._trk_dr = 0;
     }
   }
