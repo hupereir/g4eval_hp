@@ -253,7 +253,12 @@ class TrackingEvaluator_hp : public SubsysReco
     float _y = 0;
     float _z = 0;
     float _r = 0;
+
+    // geometrical phi and eta
     float _phi = 0;
+    float _eta = 0;
+
+    // energy
     float _e = 0;
     float _chisquare = 0;
     //@}
@@ -264,14 +269,14 @@ class TrackingEvaluator_hp : public SubsysReco
     float _trk_y = 0;
     float _trk_z = 0;
     float _trk_r = 0;
+
+    // geometrical phi and eta
     float _trk_phi = 0;
+    float _trk_eta = 0;
+
+    // extrapolation length
     float _trk_dr = 0;
 
-    // cluster - track delta phi
-    float _trk_dphi = 0;
-
-    // cluster - track deta eta
-    float _trk_deta = 0;
 
     //@}
 
