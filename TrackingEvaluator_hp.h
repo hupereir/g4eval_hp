@@ -276,8 +276,6 @@ class TrackingEvaluator_hp : public SubsysReco
 
     // extrapolation length
     float _trk_dr = 0;
-
-
     //@}
 
     //! towers
@@ -422,9 +420,6 @@ class TrackingEvaluator_hp : public SubsysReco
     //! tpc seed
     bool _has_tpc_seed = false;
     SeedStruct _tpc_seed;
-
-//     //! tpc seed extrapolated to the same radius as the silicon seed
-//     SeedStruct _tpc_seed_extrap;
     //@}
 
     // associate clusters
@@ -471,6 +466,9 @@ class TrackingEvaluator_hp : public SubsysReco
     float _pt = 0;
     float _p = 0;
     float _eta = 0;
+
+    int _pid = 0;
+    bool _is_primary = false;
 
   };
 
@@ -632,6 +630,13 @@ class TrackingEvaluator_hp : public SubsysReco
   //! calorimeter min enery
   void set_calo_min_energy( int layer, double value )
   { m_calo_min_energy[layer] = value; }
+
+  //! mass range for track pairs
+  void set_mass_range( double min, double max )
+  {
+    m_mass_min = min;
+    m_mass_max = max;
+  }
 
   //!@name tweak which distortion corrections are applied
   //@{
@@ -819,6 +824,10 @@ class TrackingEvaluator_hp : public SubsysReco
   //! calorimeter min energy cut
   using calo_min_energy_map_t = std::map<int, float>;
   calo_min_energy_map_t m_calo_min_energy;
+
+  //! mass range for track pairs (GeV)
+  double m_mass_min = 0;
+  double m_mass_max = 10;
 
   //!@name geant4 hits
   //@{

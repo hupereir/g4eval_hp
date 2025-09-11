@@ -460,8 +460,8 @@ namespace
 
     // electron mass
     static constexpr double electronMass = 0.511e-3;
-    auto firstE = std::sqrt( square( electronMass ) + square( get_p( first->get_px(), first->get_py(), first->get_pz() ) ) );
-    auto secondE = std::sqrt( square( electronMass ) + square( get_p( second->get_px(), second->get_py(), second->get_pz() ) ) );
+    const auto firstE = std::sqrt( square( electronMass ) + square( get_p( first->get_px(), first->get_py(), first->get_pz() ) ) );
+    const auto secondE = std::sqrt( square( electronMass ) + square( get_p( second->get_px(), second->get_py(), second->get_pz() ) ) );
     trackpair_struct._e = firstE + secondE;
     trackpair_struct._m = std::sqrt( square( trackpair_struct._e ) - square( trackpair_struct._p ) );
 
@@ -1124,24 +1124,6 @@ void TrackingEvaluator_hp::evaluate_tracks()
       {
         const auto tpc_seed_struct = create_seed(tpc_seed);
 
-//         // create extrapolated tpc seed
-//         auto tpc_seed_extrap = tpc_seed_struct;
-//         if( track_struct._has_si_seed )
-//         {
-//           const auto dr = track_struct._si_seed._r - tpc_seed_struct._r;
-// //           const auto seed_drdt = (tpc_seed_struct._x*tpc_seed->get_px() + tpc_seed_struct._y*tpc_seed->get_py())/tpc_seed_struct._r;
-// //           const auto seed_dxdr = tpc_seed->get_px()/seed_drdt;
-// //           const auto seed_dydr = tpc_seed->get_py()/seed_drdt;
-// //           const auto seed_dzdr = tpc_seed->get_pz()/seed_drdt;
-// //
-// //           tpc_seed_extrap._x = tpc_seed_struct._x + dr*seed_dxdr;
-// //           tpc_seed_extrap._y = tpc_seed_struct._y + dr*seed_dydr;
-// //           tpc_seed_extrap._z = tpc_seed_struct._z + dr*seed_dzdr;
-// //           tpc_seed_extrap._r = get_r( tpc_seed_extrap._x, tpc_seed_extrap._y);
-// //           tpc_seed_extrap._z = tpc_seed_struct._z + dr/std::tan(tpc_seed->get_theta());
-//           tpc_seed_extrap._z = tpc_seed_struct._z - dr/std::tan(tpc_seed->get_theta());
-//         }
-
         // assign
         track_struct._has_tpc_seed = true;
         track_struct._tpc_seed = std::move(tpc_seed_struct);
@@ -1365,6 +1347,9 @@ void TrackingEvaluator_hp::evaluate_track_pairs()
     {
       const auto second = secondIter->second;
       auto trackpair_struct = create_track_pair( first, second );
+
+      // check mass
+      if( trackpair_struct._m < m_mass_min || trackpair_struct._m > m_mass_max ) continue;
 
       // copy first track information
       trackpair_struct._tracks[0] = first_struct;
