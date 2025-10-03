@@ -42,7 +42,8 @@ pkginclude_HEADERS = \
   MicromegasGeometryContainer.h \
   MicromegasTrackEvaluator_hp.h \
   SimEvaluator_hp.h \
-  TrackingEvaluator_hp.h
+  TrackingEvaluator_hp.h \
+  TrackingEvaluatorLight_hp.h
 
 ROOTDICTS = \
   MicromegasClusterEvaluator_hp_Dict.cc \
@@ -50,7 +51,8 @@ ROOTDICTS = \
   MicromegasGeometryContainer_Dict.cc \
   MicromegasTrackEvaluator_hp_Dict.cc \
   SimEvaluator_hp_Dict.cc \
-  TrackingEvaluator_hp_Dict.cc
+  TrackingEvaluator_hp_Dict.cc \
+  TrackingEvaluatorLight_hp_Dict.cc
 
 pcmdir = $(libdir)
 nobase_dist_pcm_DATA = \
@@ -59,7 +61,8 @@ nobase_dist_pcm_DATA = \
   MicromegasGeometryContainer_Dict_rdict.pcm \
   MicromegasTrackEvaluator_hp_Dict_rdict.pcm \
   SimEvaluator_hp_Dict_rdict.pcm \
-  TrackingEvaluator_hp_Dict_rdict.pcm
+  TrackingEvaluator_hp_Dict_rdict.pcm \
+  TrackingEvaluatorLight_hp_Dict_rdict.pcm
 
 libg4eval_hp_la_SOURCES = \
   $(ROOTDICTS) \
@@ -69,7 +72,8 @@ libg4eval_hp_la_SOURCES = \
   MicromegasGeometryContainer.cc \
   MicromegasTrackEvaluator_hp.cc \
   SimEvaluator_hp.cc \
-  TrackingEvaluator_hp.cc
+  TrackingEvaluator_hp.cc \
+  TrackingEvaluatorLight_hp.cc
 
 # Rule for generating table CINT dictionaries.
 %_Dict.cc: %.h %LinkDef.h
