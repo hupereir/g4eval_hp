@@ -202,8 +202,10 @@ class TrackingEvaluatorLight_hp : public SubsysReco
 
     //@}
 
-    // associate calorimater clusters
-    CaloClusterStruct::List _calo_clusters;
+    CaloClusterStruct _calo_cluster_emcal;
+    CaloClusterStruct _calo_cluster_ihcal;
+    CaloClusterStruct _calo_cluster_ohcal;
+    CaloClusterStruct _calo_cluster_topo;
   };
 
   //! track container
