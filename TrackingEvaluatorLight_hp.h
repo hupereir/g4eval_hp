@@ -20,7 +20,7 @@ class PHG4CylinderGeomContainer;
 class PHG4Hit;
 class PHG4HitContainer;
 class PHG4Particle;
-class PHG4TpcCylinderGeomContainer;
+class PHG4TpcGeomContainer;
 class PHG4TruthInfoContainer;
 class RawClusterContainer;
 class SvtxTrack;
@@ -371,7 +371,7 @@ class TrackingEvaluatorLight_hp : public SubsysReco
   PHG4TruthInfoContainer* m_g4truthinfo = nullptr;
 
   //! tpc geometry
-  PHG4TpcCylinderGeomContainer* m_tpc_geom_container = nullptr;
+  PHG4TpcGeomContainer* m_tpc_geom_container = nullptr;
 
   //! micromegas geometry
   PHG4CylinderGeomContainer* m_micromegas_geom_container = nullptr;

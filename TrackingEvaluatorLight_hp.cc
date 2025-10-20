@@ -10,10 +10,10 @@
 #include <ffarawobjects/MicromegasRawHitContainer.h>
 
 #include <fun4all/Fun4AllReturnCodes.h>
-#include <g4detectors/PHG4CylinderCellGeom.h>
 #include <g4detectors/PHG4CylinderGeomContainer.h>
-#include <g4detectors/PHG4TpcCylinderGeom.h>
-#include <g4detectors/PHG4TpcCylinderGeomContainer.h>
+#include <g4detectors/PHG4TpcGeomContainer.h>
+#include <g4detectors/PHG4TpcGeom.h>
+
 #include <g4main/PHG4Hit.h>
 #include <g4main/PHG4Hitv1.h>
 #include <g4main/PHG4HitContainer.h>
@@ -507,7 +507,7 @@ int TrackingEvaluatorLight_hp::InitRun(PHCompositeNode* topNode)
 {
 
   // TPC geometry (to check ADC clock frequency)
-  auto geom = findNode::getClass<PHG4TpcCylinderGeomContainer>(topNode, "CYLINDERCELLGEOM_SVTX");
+  auto geom = findNode::getClass<PHG4TpcGeomContainer>(topNode, "TPCGEOMCONTAINER");
   assert(geom);
 
   const auto AdcClockPeriod = geom->GetFirstLayerCellGeom()->get_zstep();
@@ -672,7 +672,7 @@ int TrackingEvaluatorLight_hp::load_nodes( PHCompositeNode* topNode )
   m_g4truthinfo = findNode::getClass<PHG4TruthInfoContainer>(topNode, "G4TruthInfo");
 
   // tpc geometry
-  m_tpc_geom_container = findNode::getClass<PHG4TpcCylinderGeomContainer>(topNode, "CYLINDERCELLGEOM_SVTX");
+  m_tpc_geom_container = findNode::getClass<PHG4TpcGeomContainer>(topNode, "TPCGEOMCONTAINER");
   assert( m_tpc_geom_container );
 
   // micromegas geometry

@@ -10,10 +10,10 @@
 #include <ffarawobjects/MicromegasRawHitContainer.h>
 
 #include <fun4all/Fun4AllReturnCodes.h>
-#include <g4detectors/PHG4CylinderCellGeom.h>
 #include <g4detectors/PHG4CylinderGeomContainer.h>
-#include <g4detectors/PHG4TpcCylinderGeom.h>
-#include <g4detectors/PHG4TpcCylinderGeomContainer.h>
+#include <g4detectors/PHG4TpcGeomContainer.h>
+#include <g4detectors/PHG4TpcGeom.h>
+
 #include <g4main/PHG4Hit.h>
 #include <g4main/PHG4Hitv1.h>
 #include <g4main/PHG4HitContainer.h>
@@ -704,7 +704,7 @@ int TrackingEvaluator_hp::InitRun(PHCompositeNode* topNode)
 {
 
   // TPC geometry (to check ADC clock frequency)
-  auto geom = findNode::getClass<PHG4TpcCylinderGeomContainer>(topNode, "CYLINDERCELLGEOM_SVTX");
+  auto geom = findNode::getClass<PHG4TpcGeomContainer>(topNode, "TPCGEOMCONTAINER");
   assert(geom);
 
   const auto AdcClockPeriod = geom->GetFirstLayerCellGeom()->get_zstep();
@@ -897,7 +897,7 @@ int TrackingEvaluator_hp::load_nodes( PHCompositeNode* topNode )
   m_g4truthinfo = findNode::getClass<PHG4TruthInfoContainer>(topNode, "G4TruthInfo");
 
   // tpc geometry
-  m_tpc_geom_container = findNode::getClass<PHG4TpcCylinderGeomContainer>(topNode, "CYLINDERCELLGEOM_SVTX");
+  m_tpc_geom_container = findNode::getClass<PHG4TpcGeomContainer>(topNode, "TPCGEOMCONTAINER");
   assert( m_tpc_geom_container );
 
   // micromegas geometry
@@ -1173,140 +1173,145 @@ void TrackingEvaluator_hp::evaluate_tracks()
     track_struct._dedx = get_dedx( track->get_tpc_seed() );
     track_struct._truth_dedx = get_truth_dedx(track->get_tpc_seed(),id);
 
-    // store cluster and keys
-    using cluster_map_t = std::map<TrkrDefs::cluskey,ClusterStruct>;
-    cluster_map_t cluster_map;
-
-    // loop over clusters
-    for( const auto& cluster_key:get_cluster_keys( track ) )
+    // add matching calorimeter clusters
+    if(m_flags&EvalTrackClusters)
     {
-      auto cluster = m_cluster_map->findCluster( cluster_key );
-      if( !cluster )
+
+      // store cluster and keys
+      using cluster_map_t = std::map<TrkrDefs::cluskey,ClusterStruct>;
+      cluster_map_t cluster_map;
+
+      // loop over clusters
+      for( const auto& cluster_key:get_cluster_keys( track ) )
       {
-        std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
-          << " unable to find cluster for key " << cluster_key
-          << " detector: " << (int) TrkrDefs::getTrkrId( cluster_key )
-          << std::endl;
-        continue;
+        auto cluster = m_cluster_map->findCluster( cluster_key );
+        if( !cluster )
+        {
+          std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
+            << " unable to find cluster for key " << cluster_key
+            << " detector: " << (int) TrkrDefs::getTrkrId( cluster_key )
+            << std::endl;
+          continue;
+        }
+
+        // create new cluster struct
+        auto cluster_struct = create_cluster( cluster_key, cluster, crossing );
+        add_cluster_size( cluster_struct, cluster_key, m_cluster_hit_map );
+        add_cluster_energy( cluster_struct, cluster_key, m_cluster_hit_map, m_hitsetcontainer );
+
+        cluster_map.emplace(cluster_key, cluster_struct);
       }
 
-      // create new cluster struct
-      auto cluster_struct = create_cluster( cluster_key, cluster, crossing );
-      add_cluster_size( cluster_struct, cluster_key, m_cluster_hit_map );
-      add_cluster_energy( cluster_struct, cluster_key, m_cluster_hit_map, m_hitsetcontainer );
-
-      cluster_map.emplace(cluster_key, cluster_struct);
-    }
-
-    if( m_flags & UseTpcClusterMover )
-    {
-      // move back clusters to surface using TPC Cluster mover
-      using position_pair_t = std::pair<TrkrDefs::cluskey, Acts::Vector3>;
-      using position_list_t = std::vector<position_pair_t>;
-      position_list_t position_list_raw;
-      std::transform( cluster_map.begin(), cluster_map.end(), std::back_inserter( position_list_raw ),
-        []( const cluster_map_t::value_type& cluster_pair )
+      if( m_flags & UseTpcClusterMover )
+      {
+        // move back clusters to surface using TPC Cluster mover
+        using position_pair_t = std::pair<TrkrDefs::cluskey, Acts::Vector3>;
+        using position_list_t = std::vector<position_pair_t>;
+        position_list_t position_list_raw;
+        std::transform( cluster_map.begin(), cluster_map.end(), std::back_inserter( position_list_raw ),
+          []( const cluster_map_t::value_type& cluster_pair )
         { return std::make_pair( cluster_pair.first, Acts::Vector3{cluster_pair.second._x,cluster_pair.second._y,cluster_pair.second._z} ); } );
 
-      auto position_list_moved = m_tpcClusterMover.processTrack(position_list_raw);
+        auto position_list_moved = m_tpcClusterMover.processTrack(position_list_raw);
 
-      // reassign to original cluster map
-      for( const auto& [ckey,position]:position_list_moved )
-      {
-        auto&& cluster_struct = cluster_map.at(ckey);
-        cluster_struct._x = position.x();
-        cluster_struct._y = position.y();
-        cluster_struct._z = position.z();
-        cluster_struct._r = get_r( cluster_struct._x, cluster_struct._y );
-        cluster_struct._phi = std::atan2( cluster_struct._y, cluster_struct._x );
-      }
-    }
-
-    // truth information
-    for( auto&& [cluster_key, cluster_struct]:cluster_map )
-    {
-      const auto g4hits = find_g4hits( cluster_key );
-      const bool is_micromegas( TrkrDefs::getTrkrId(cluster_key) == TrkrDefs::micromegasId );
-      if( is_micromegas ) add_truth_information_micromegas( cluster_struct, g4hits );
-      else add_truth_information( cluster_struct, g4hits );
-
-      {
-        // check g4hits associated particle id and update track _correct_mask
-        const auto iter = std::find_if( g4hits.begin(), g4hits.end(), [id]( const auto& g4hit ){ return g4hit->get_trkid() == id; } );
-        if( iter != g4hits.end() ) track_struct._correct_mask |= (1LL<<(*iter)->get_layer());
-
-        // get track id energy as max contributor
-        using eion_map_t = std::map<int, float>;
-        using eion_pair_t = std::pair<int, float>;
-        eion_map_t eion_map;
-        for( const auto& g4hit:g4hits )
+        // reassign to original cluster map
+        for( const auto& [ckey,position]:position_list_moved )
         {
-          auto iter = eion_map.find( g4hit->get_trkid() );
-          if( iter == eion_map.end() ) eion_map.insert( std::make_pair( g4hit->get_trkid(), g4hit->get_eion() ) );
-          else iter->second += g4hit->get_eion();
+          auto&& cluster_struct = cluster_map.at(ckey);
+          cluster_struct._x = position.x();
+          cluster_struct._y = position.y();
+          cluster_struct._z = position.z();
+          cluster_struct._r = get_r( cluster_struct._x, cluster_struct._y );
+          cluster_struct._phi = std::atan2( cluster_struct._y, cluster_struct._x );
         }
-
-        if( !eion_map.empty() )
-        {
-          const auto max_element_iter = std::max_element( eion_map.begin(), eion_map.end(), []( const eion_pair_t& first, const eion_pair_t& second )
-            { return first.second < second.second; } );
-          if( max_element_iter->first == id ) track_struct._correct_mask_strict |= (1LL<<(*iter)->get_layer());
-        }
-
       }
-    }
 
-    // track states
-    for( auto&& [cluster_key, cluster_struct]:cluster_map )
-    {
-
-      // find track state that match cluster
-      bool found = false;
-      for( auto state_iter = track->begin_states(); state_iter != track->end_states(); ++state_iter )
+      // truth information
+      for( auto&& [cluster_key, cluster_struct]:cluster_map )
       {
-        const auto& [pathlengh, state] = *state_iter;
-        if( state->get_cluskey() == cluster_key )
-        {
-          // store track state in cluster struct
-          const bool is_micromegas( TrkrDefs::getTrkrId(cluster_key) == TrkrDefs::micromegasId );
-          if( is_micromegas ) add_trk_information_micromegas( cluster_struct, state );
-          else add_trk_information( cluster_struct, state );
-          found = true;
+        const auto g4hits = find_g4hits( cluster_key );
+        const bool is_micromegas( TrkrDefs::getTrkrId(cluster_key) == TrkrDefs::micromegasId );
+        if( is_micromegas ) add_truth_information_micromegas( cluster_struct, g4hits );
+        else add_truth_information( cluster_struct, g4hits );
 
-          if( Verbosity())
+        {
+          // check g4hits associated particle id and update track _correct_mask
+          const auto iter = std::find_if( g4hits.begin(), g4hits.end(), [id]( const auto& g4hit ){ return g4hit->get_trkid() == id; } );
+          if( iter != g4hits.end() ) track_struct._correct_mask |= (1LL<<(*iter)->get_layer());
+
+          // get track id energy as max contributor
+          using eion_map_t = std::map<int, float>;
+          using eion_pair_t = std::pair<int, float>;
+          eion_map_t eion_map;
+          for( const auto& g4hit:g4hits )
           {
-            std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
-              << " track id: " << track_id
-              << " state vector found for layer: " << cluster_struct._layer
-              << std::endl;
+            auto iter = eion_map.find( g4hit->get_trkid() );
+            if( iter == eion_map.end() ) eion_map.insert( std::make_pair( g4hit->get_trkid(), g4hit->get_eion() ) );
+            else iter->second += g4hit->get_eion();
           }
 
-          break;
+          if( !eion_map.empty() )
+          {
+            const auto max_element_iter = std::max_element( eion_map.begin(), eion_map.end(), []( const eion_pair_t& first, const eion_pair_t& second )
+            { return first.second < second.second; } );
+            if( max_element_iter->first == id ) track_struct._correct_mask_strict |= (1LL<<(*iter)->get_layer());
+          }
+
         }
       }
 
-      if((!found) && Verbosity())
+      // track states
+      for( auto&& [cluster_key, cluster_struct]:cluster_map )
       {
-        std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
-          << " track id: " << track_id
-          << " no state vector found for layer: " << cluster_struct._layer
-          << std::endl;
+
+        // find track state that match cluster
+        bool found = false;
+        for( auto state_iter = track->begin_states(); state_iter != track->end_states(); ++state_iter )
+        {
+          const auto& [pathlengh, state] = *state_iter;
+          if( state->get_cluskey() == cluster_key )
+          {
+            // store track state in cluster struct
+            const bool is_micromegas( TrkrDefs::getTrkrId(cluster_key) == TrkrDefs::micromegasId );
+            if( is_micromegas ) add_trk_information_micromegas( cluster_struct, state );
+            else add_trk_information( cluster_struct, state );
+            found = true;
+
+            if( Verbosity())
+            {
+              std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
+                << " track id: " << track_id
+                << " state vector found for layer: " << cluster_struct._layer
+                << std::endl;
+            }
+
+            break;
+          }
+        }
+
+        if((!found) && Verbosity())
+        {
+          std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
+            << " track id: " << track_id
+            << " no state vector found for layer: " << cluster_struct._layer
+            << std::endl;
+        }
+
+        // some printout
+        if( Verbosity() )
+        {
+          std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
+            << " cluster key: " <<  cluster_key
+            << " _trk_rphi_error: " << cluster_struct._trk_r*cluster_struct._trk_phi_error
+            << " _trk_z_error: " << cluster_struct._trk_z_error << std::endl;
+        }
+
       }
 
-      // some printout
-      if( Verbosity() )
-      {
-        std::cout << "TrackingEvaluator_hp::evaluate_tracks -"
-          << " cluster key: " <<  cluster_key
-          << " _trk_rphi_error: " << cluster_struct._trk_r*cluster_struct._trk_phi_error
-          << " _trk_z_error: " << cluster_struct._trk_z_error << std::endl;
-      }
-
+      // add clusters to track
+      for( const auto&[key,cluster_struct]:cluster_map )
+      { track_struct._clusters.push_back( std::move(cluster_struct) ); }
     }
-
-    // add clusters to track
-    for( const auto&[key,cluster_struct]:cluster_map )
-    { track_struct._clusters.push_back( std::move(cluster_struct) ); }
 
     // add matching calorimeter clusters
     if(m_flags&EvalCaloClusters)

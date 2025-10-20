@@ -20,7 +20,7 @@ class PHG4CylinderGeomContainer;
 class PHG4Hit;
 class PHG4HitContainer;
 class PHG4Particle;
-class PHG4TpcCylinderGeomContainer;
+class PHG4TpcGeomContainer;
 class PHG4TruthInfoContainer;
 class RawClusterContainer;
 class SvtxTrack;
@@ -609,6 +609,7 @@ class TrackingEvaluator_hp : public SubsysReco
     EvalEvent = 1<<0,
     EvalClusters = 1<<1,
     EvalTracks = 1<<2,
+    EvalTrackClusters = 1<<12,
     EvalTrackPairs = 1<<3,
     PrintClusters = 1<<4,
     PrintTracks = 1<<5,
@@ -779,7 +780,7 @@ class TrackingEvaluator_hp : public SubsysReco
   Container* m_container = nullptr;
 
   //! flags
-  int m_flags = EvalEvent | EvalClusters | EvalTracks | EvalTrackPairs;
+  int m_flags = EvalEvent | EvalClusters | EvalTracks | EvalTrackClusters | EvalTrackPairs;
 
   /// Acts tracking geometry for surface lookup
   ActsGeometry *m_tGeometry = nullptr;
@@ -841,7 +842,7 @@ class TrackingEvaluator_hp : public SubsysReco
   PHG4TruthInfoContainer* m_g4truthinfo = nullptr;
 
   //! tpc geometry
-  PHG4TpcCylinderGeomContainer* m_tpc_geom_container = nullptr;
+  PHG4TpcGeomContainer* m_tpc_geom_container = nullptr;
 
   //! micromegas geometry
   PHG4CylinderGeomContainer* m_micromegas_geom_container = nullptr;

@@ -2,13 +2,15 @@
 
 #include <ffaobjects/EventHeader.h>
 #include <fun4all/Fun4AllReturnCodes.h>
-#include <g4detectors/PHG4TpcCylinderGeomContainer.h>
-#include <g4detectors/PHG4TpcCylinderGeom.h>
 #include <g4main/PHG4Hit.h>
 #include <g4main/PHG4HitContainer.h>
 #include <g4main/PHG4Particle.h>
 #include <g4main/PHG4TruthInfoContainer.h>
 #include <g4main/PHG4VtxPoint.h>
+
+#include <g4detectors/PHG4TpcGeomContainer.h>
+#include <g4detectors/PHG4TpcGeom.h>
+
 #include <phhepmc/PHHepMCGenEventMap.h>
 #include <phool/getClass.h>
 #include <phool/PHCompositeNode.h>
@@ -301,14 +303,14 @@ int SimEvaluator_hp::load_nodes( PHCompositeNode* topnode )
 void SimEvaluator_hp::print_tpc( PHCompositeNode* topnode )
 {
   // get relevant node
-  const auto container = findNode::getClass<PHG4TpcCylinderGeomContainer>(topnode, "CYLINDERCELLGEOM_SVTX");
+  const auto container = findNode::getClass<PHG4TpcGeomContainer>(topnode, "TPCGEOMCONTAINER");
   if( !container ) return;
 
   std::vector<int> phibins;
   std::vector<int> zbins;
   std::vector<float> thickness;
   std::vector<float> radius;
-  const range_adaptor<PHG4TpcCylinderGeomContainer::ConstIterator> range(std::move( container->get_begin_end()));
+  const range_adaptor<PHG4TpcGeomContainer::ConstIterator> range(std::move( container->get_begin_end()));
   for( const auto&pair:range )
   {
     phibins.push_back( pair.second->get_phibins() );
