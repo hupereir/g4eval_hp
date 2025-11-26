@@ -1532,7 +1532,7 @@ void TrackingEvaluator_hp::print_track(SvtxTrack* track) const
   }
 
   // also print the TPC tracks states
-  if( false )
+  if( true )
   {
     for( auto iter = track->begin_states(); iter != track->end_states(); ++iter )
     {
@@ -1542,7 +1542,16 @@ void TrackingEvaluator_hp::print_track(SvtxTrack* track) const
         << " layer: " << (int)TrkrDefs::getLayer(state->get_cluskey())
         << " position: (" << state->get_x() << "," << state->get_y() << "," << state->get_z() << ")"
         << " momentum: (" << state->get_px() << "," << state->get_py() << "," << state->get_px() << ")"
+        << " covariance:"
         << std::endl;
+      for( int i = 0; i<6; ++i )
+      {
+        for( int j=0; j<6; ++j )
+        {
+          std::cout << "  " << state->get_error(i,j);
+        }
+        std::cout << std::endl;
+      }
     }
   }
 
