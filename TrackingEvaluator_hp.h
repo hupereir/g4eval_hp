@@ -220,6 +220,9 @@ class TrackingEvaluator_hp : public SubsysReco
     //! micromegas tile id
     int _tileid = 0;
 
+    //! tpc sector id
+    int _sectorid = 0;
+
   };
 
   // tower information

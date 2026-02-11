@@ -1381,7 +1381,7 @@ void TrackingEvaluator_hp::print_clusters() const
     {
 
       const auto trkrId = TrkrDefs::getTrkrId( clusterkey );
-      if( trkrId==TrkrDefs::mvtxId )
+      if( trkrId==TrkrDefs::micromegasId )
       { print_cluster( clusterkey, cluster ); }
     }
   }
@@ -1401,11 +1401,16 @@ void TrackingEvaluator_hp::print_cluster( TrkrDefs::cluskey ckey, TrkrCluster* c
   // get detector type
   const auto trkrId = TrkrDefs::getTrkrId( ckey );
 
-  std::cout << "TrackingEvaluator_hp::print_cluster - MVTX cluster: " << ckey
+  std::cout << "TrackingEvaluator_hp::print_cluster - cluster: " << ckey
     << " position: (" << cluster->getLocalX() << ", " << cluster->getLocalY() << ")"
     << " size: " << (int) cluster->getSize()
-    << " stave: " << (int) MvtxDefs::getStaveId(ckey) << " chip: " << (int)MvtxDefs::getChipId(ckey) << " strobe: " << (int)MvtxDefs::getStrobeId(ckey) << std::endl;
+    // << " stave: " << (int) MvtxDefs::getStaveId(ckey) << " chip: " << (int)MvtxDefs::getChipId(ckey) << " strobe: " << (int)MvtxDefs::getStrobeId(ckey)
+    << std::endl;
 
+//   std::cout << "TrackingEvaluator_hp::print_cluster - MVTX cluster: " << ckey
+//     << " position: (" << cluster->getLocalX() << ", " << cluster->getLocalY() << ")"
+//     << " size: " << (int) cluster->getSize()
+//     << " stave: " << (int) MvtxDefs::getStaveId(ckey) << " chip: " << (int)MvtxDefs::getChipId(ckey) << " strobe: " << (int)MvtxDefs::getStrobeId(ckey) << std::endl;
   // get associated hits
   if( false )
   {
@@ -1836,6 +1841,9 @@ TrackingEvaluator_hp::ClusterStruct TrackingEvaluator_hp::create_cluster( TrkrDe
 
   if(TrkrDefs::getTrkrId(key) == TrkrDefs::micromegasId)
   { cluster_struct._tileid = MicromegasDefs::getTileId(key); }
+
+  if(TrkrDefs::getTrkrId(key) == TrkrDefs::tpcId)
+  { cluster_struct._sectorid = TpcDefs::getSectorId(key); }
 
   return cluster_struct;
 }
