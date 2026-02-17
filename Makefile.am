@@ -7,7 +7,7 @@ AM_CPPFLAGS = \
   -I$(includedir) \
   -I$(OFFLINE_MAIN)/include \
   -I${G4_MAIN}/include \
-	-isystem`root-config --incdir`
+	 -isystem`root-config --incdir`
 
 AM_LDFLAGS = \
   -L$(libdir) \
@@ -27,6 +27,7 @@ libg4eval_hp_la_LIBADD = \
   -lmvtx_io \
   -lphg4hit \
   -lphhepmc_io \
+  -lPHPythia8 \
   -ltpc \
   -ltpc_io \
   -ltrackbase_historic_io \
@@ -41,6 +42,7 @@ pkginclude_HEADERS = \
   MicromegasEvaluator_hp.h \
   MicromegasGeometryContainer.h \
   MicromegasTrackEvaluator_hp.h \
+  PHPythia8_hp.h \
   SimEvaluator_hp.h \
   TrackingEvaluator_hp.h \
   TrackingEvaluatorLight_hp.h
@@ -50,6 +52,7 @@ ROOTDICTS = \
   MicromegasEvaluator_hp_Dict.cc \
   MicromegasGeometryContainer_Dict.cc \
   MicromegasTrackEvaluator_hp_Dict.cc \
+  PHPythia8_hp_Dict.cc \
   SimEvaluator_hp_Dict.cc \
   TrackingEvaluator_hp_Dict.cc \
   TrackingEvaluatorLight_hp_Dict.cc
@@ -60,7 +63,8 @@ nobase_dist_pcm_DATA = \
   MicromegasEvaluator_hp_Dict_rdict.pcm \
   MicromegasGeometryContainer_Dict_rdict.pcm \
   MicromegasTrackEvaluator_hp_Dict_rdict.pcm \
-  SimEvaluator_hp_Dict_rdict.pcm \
+  PHPythia8_hp_Dict_rdict.pcm \
+	 SimEvaluator_hp_Dict_rdict.pcm \
   TrackingEvaluator_hp_Dict_rdict.pcm \
   TrackingEvaluatorLight_hp_Dict_rdict.pcm
 
@@ -71,6 +75,7 @@ libg4eval_hp_la_SOURCES = \
   MicromegasEvaluator_hp.cc \
   MicromegasGeometryContainer.cc \
   MicromegasTrackEvaluator_hp.cc \
+  PHPythia8_hp.cc \
   SimEvaluator_hp.cc \
   TrackingEvaluator_hp.cc \
   TrackingEvaluatorLight_hp.cc
