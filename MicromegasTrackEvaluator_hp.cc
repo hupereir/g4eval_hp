@@ -247,7 +247,7 @@ int MicromegasTrackEvaluator_hp::Init(PHCompositeNode* topNode )
     << (m_calibration_filename.empty() ? "unspecified":m_calibration_filename )
     << std::endl;
 
-  std::cout << "MicromegasTrackEvaluator_hp::Init - m_use_silicon: " << m_use_silicon << std::endl;
+  std::cout << "MicromegasTrackEvaluator_hp::Init - m_extrapolate_from_silicon: " << m_extrapolate_from_silicon << std::endl;
   std::cout << "MicromegasTrackEvaluator_hp::Init - m_zero_field: " << m_zero_field << std::endl;
   std::cout << "MicromegasTrackEvaluator_hp::Init - m_min_tpc_layer: " << m_min_tpc_layer << std::endl;
   std::cout << "MicromegasTrackEvaluator_hp::Init - m_max_tpc_layer: " << m_max_tpc_layer << std::endl;
@@ -422,7 +422,7 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
     }
 
     // check global positions
-    if( m_use_silicon )
+    if( m_extrapolate_from_silicon )
     {
 
       if( global_positions_mvtx.size()<3 ) { continue; }
@@ -434,7 +434,7 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
     }
 
     // r,z linear fit
-    const auto [slope_rz, intersect_rz] = m_use_silicon ?
+    const auto [slope_rz, intersect_rz] = m_extrapolate_from_silicon ?
       TrackFitUtils::line_fit(global_positions_mvtx):
       TrackFitUtils::line_fit(global_positions);
 
@@ -453,7 +453,7 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
     {
 
       // x,y straight fit
-      std::tie( slope_xy, intersect_xy ) = m_use_silicon ?
+      std::tie( slope_xy, intersect_xy ) = m_extrapolate_from_silicon ?
         TrackFitUtils::line_fit_xy(global_positions_silicon):
         TrackFitUtils::line_fit_xy(global_positions);
 
@@ -465,7 +465,7 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
     } else {
 
       // x,y circle
-      std::tie( R, X0, Y0 ) = m_use_silicon ?
+      std::tie( R, X0, Y0 ) = m_extrapolate_from_silicon ?
         TrackFitUtils::circle_fit_by_taubin(global_positions_silicon):
         TrackFitUtils::circle_fit_by_taubin(global_positions);
 
@@ -505,7 +505,7 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
       }
 
       // we can figure out which solution is correct based on the last cluster position in the TPC
-      const double last_clus_phi = m_use_silicon ?
+      const double last_clus_phi = m_extrapolate_from_silicon ?
         std::atan2(global_positions_silicon.back().y(), global_positions_silicon.back().x()):
         std::atan2(global_positions.back().y(), global_positions.back().x());
       double phi_plus = std::atan2(yplus, xplus);

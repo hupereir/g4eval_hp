@@ -41,8 +41,8 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
   virtual int End(PHCompositeNode*);
 
   /// use silidon only for the extrapolation
-  void set_use_silicon( bool value )
-  { m_use_silicon = value; }
+  void set_extrapolate_from_silicon( bool value )
+  { m_extrapolate_from_silicon = value; }
 
   void set_min_tpc_layer( int value )
   { m_min_tpc_layer = value; }
@@ -258,7 +258,7 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
   SvtxTrackMap* m_track_map = nullptr;
 
   //! use silicon only for the extrapolation
-  bool m_use_silicon = false;
+  bool m_extrapolate_from_silicon = false;
 
   //! zero field flag
   bool m_zero_field = false;
