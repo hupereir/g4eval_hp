@@ -602,6 +602,7 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
       for(const auto& [cluster_key, cluster]:range_adaptor(mm_clusrange))
       {
         ClusterStruct cluster_struct = create_cluster(cluster_key, cluster);
+        cluster_struct._accepted = accept_cluster( track_struct, cluster_struct );
         track_struct._clusters.push_back(cluster_struct);
 
         // get distance to track state
@@ -632,6 +633,29 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
       track_struct._trk_state_z._tile )
     { continue; }
 
+    // print
+    if( track_struct._best_cluster_phi._accepted )
+    {
+      std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks -"
+        << " tpc seed: " << track->get_tpc_seed()
+        << " si seed: " << track->get_silicon_seed()
+        << " ckey_min: " << track_struct._best_cluster_phi._key
+        << std::endl;
+    }
+
+    if( track_struct._best_cluster_z._accepted )
+    {
+      std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks -"
+        << " tpc seed: " << track->get_tpc_seed()
+        << " si seed: " << track->get_silicon_seed()
+        << " ckey_min: " << track_struct._best_cluster_z._key
+        << std::endl;
+    }
+
+    // update found cluster accepted flags
+    track_struct._found_cluster_phi._accepted = accept_cluster( track_struct, track_struct._found_cluster_phi );
+    track_struct._found_cluster_z._accepted = accept_cluster( track_struct, track_struct._found_cluster_z );
+
     m_container->add_track( track_struct );
   }
 }
@@ -644,6 +668,7 @@ MicromegasTrackEvaluator_hp::ClusterStruct MicromegasTrackEvaluator_hp::create_c
   cluster_struct._layer = TrkrDefs::getLayer(cluster_key);
   cluster_struct._tile = MicromegasDefs::getTileId(cluster_key);
   cluster_struct._size = cluster->getSize();
+  cluster_struct._key = cluster_key;
 
   if( m_cluster_hit_map && m_hitsetcontainer )
   {
@@ -701,5 +726,27 @@ MicromegasTrackEvaluator_hp::ClusterStruct MicromegasTrackEvaluator_hp::create_c
   cluster_struct._z = globalPosition.z();
 
   return cluster_struct;
+}
 
+
+//______________________________________________________________________________________________________________________
+bool MicromegasTrackEvaluator_hp::accept_cluster(
+  const MicromegasTrackEvaluator_hp::TrackStruct& track_struct,
+  const MicromegasTrackEvaluator_hp::ClusterStruct& cluster_struct ) const
+{
+
+  if( cluster_struct._layer <= 0 ) return false;
+
+  // select proper track state
+  const auto& trk_state = (cluster_struct._layer == 55) ?
+    track_struct._trk_state_phi:
+    track_struct._trk_state_z;
+
+  if( trk_state._layer <= 0 ) return false;
+
+  const float drphi = trk_state._x_local - cluster_struct._x_local;
+  const float dz = trk_state._y_local - cluster_struct._y_local;
+  const bool accept_phi = std::abs(drphi) < _rphi_search_win[cluster_struct._layer-55];
+  const bool accept_z = std::abs(dz) < _z_search_win[cluster_struct._layer-55];
+  return accept_phi && accept_z;
 }

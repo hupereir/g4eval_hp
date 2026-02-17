@@ -88,6 +88,8 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
     unsigned short _layer = 0;
     unsigned short _tile = 0;
     unsigned short _size = 0;
+    TrkrDefs::cluskey _key = 0;
+
     double _charge = 0;
     int _strip = 0;
     int _region = 0;
@@ -98,6 +100,8 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
     double _x = 0;
     double _y = 0;
     double _z = 0;
+
+    bool _accepted = false;
 
     using List = std::vector<ClusterStruct>;
   };
@@ -219,6 +223,23 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
   void set_trackmapname( const std::string& value )
   { m_trackmapname = value; }
 
+  //! phi matching cuts layer 1
+  void set_rphi_search_window_lyr1(const double win)
+  { _rphi_search_win[0] = win; }
+
+  //! z matching cuts layer 1
+  void set_z_search_window_lyr1(const double win)
+  { _z_search_win[0] = win; }
+
+  //! phi matching cuts layer 2
+  void set_rphi_search_window_lyr2(const double win)
+  { _rphi_search_win[1] = win; }
+
+  //! z matching cuts layer 2
+  void set_z_search_window_lyr2(const double win)
+  { _z_search_win[1] = win; }
+
+
   private:
 
   /// load nodes
@@ -229,6 +250,9 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
 
   //! create cluster structure from cluster
   ClusterStruct create_cluster( TrkrDefs::cluskey, TrkrCluster* ) const;
+
+  //! accept cluster
+  bool accept_cluster( const TrackStruct&, const ClusterStruct& ) const;
 
   /// cluster array
   Container* m_container = nullptr;
@@ -285,6 +309,12 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
 
   // range of TPC layers to use in projection to micromegas
   unsigned int m_max_tpc_layer = 55;
+
+  //! default rphi search window for each layer
+  std::array<double, 2> _rphi_search_win{3, 30};
+
+  //! default z search window for each layer
+  std::array<double, 2> _z_search_win{15, 3};
 
 };
 
