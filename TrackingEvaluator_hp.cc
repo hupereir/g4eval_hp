@@ -1381,7 +1381,7 @@ void TrackingEvaluator_hp::print_clusters() const
     {
 
       const auto trkrId = TrkrDefs::getTrkrId( clusterkey );
-      if( trkrId==TrkrDefs::micromegasId )
+      // if( trkrId==TrkrDefs::micromegasId )
       { print_cluster( clusterkey, cluster ); }
     }
   }
@@ -1396,21 +1396,22 @@ void TrackingEvaluator_hp::print_tracks() const
 }
 
 //_____________________________________________________________________
-void TrackingEvaluator_hp::print_cluster( TrkrDefs::cluskey ckey, TrkrCluster* cluster ) const
+void TrackingEvaluator_hp::print_cluster( TrkrDefs::cluskey ckey, TrkrCluster* cluster, short int crossing ) const
 {
   // get detector type
   const auto trkrId = TrkrDefs::getTrkrId( ckey );
 
-  std::cout << "TrackingEvaluator_hp::print_cluster - cluster: " << ckey
-    << " position: (" << cluster->getLocalX() << ", " << cluster->getLocalY() << ")"
-    << " size: " << (int) cluster->getSize()
-    // << " stave: " << (int) MvtxDefs::getStaveId(ckey) << " chip: " << (int)MvtxDefs::getChipId(ckey) << " strobe: " << (int)MvtxDefs::getStrobeId(ckey)
-    << std::endl;
+  // convert to global coordinates
+  const auto global = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(ckey, cluster, crossing);
 
-//   std::cout << "TrackingEvaluator_hp::print_cluster - MVTX cluster: " << ckey
-//     << " position: (" << cluster->getLocalX() << ", " << cluster->getLocalY() << ")"
-//     << " size: " << (int) cluster->getSize()
-//     << " stave: " << (int) MvtxDefs::getStaveId(ckey) << " chip: " << (int)MvtxDefs::getChipId(ckey) << " strobe: " << (int)MvtxDefs::getStrobeId(ckey) << std::endl;
+  if( false )
+  {
+    std::cout << "TrackingEvaluator_hp::print_cluster - cluster: " << ckey
+      << " local: (" << cluster->getLocalX() << ", " << cluster->getLocalY() << ")"
+      << " global: (" << global.x() << ", " << global.y() << ", " << global.z() << ")"
+      << std::endl;
+  }
+
   // get associated hits
   if( false )
   {
@@ -1505,12 +1506,15 @@ void TrackingEvaluator_hp::print_track(SvtxTrack* track) const
   std::cout << "TrackingEvaluator_hp::print_track - momentum: (" << track->get_px() << ", " << track->get_py() << ", " << track->get_pz() << ")" << std::endl;
   std::cout << "TrackingEvaluator_hp::print_track - clusters: " << get_cluster_keys( track ).size() << ", states: " << track->size_states() << std::endl;
 
-//   std::cout << "TrackingEvaluator_hp::print_track - silicon seed id: " << track->get_silicon_seed() << std::endl;
-//   std::cout << "TrackingEvaluator_hp::print_track - tpc seed id: " << track->get_tpc_seed() << std::endl;
-  std::cout << " MVTX cluster keys: " << get_detector_cluster_keys<TrkrDefs::mvtxId>(track) << std::endl;
-  std::cout << " INTT cluster keys: " << get_detector_cluster_keys<TrkrDefs::inttId>(track) << std::endl;
-  std::cout << " TPOT cluster keys: " << get_detector_cluster_keys<TrkrDefs::micromegasId>(track) << std::endl;
-  std::cout << " TPC cluster keys: " << get_detector_cluster_keys<TrkrDefs::tpcId>(track) << std::endl;
+  if( false )
+  {
+    //   std::cout << "TrackingEvaluator_hp::print_track - silicon seed id: " << track->get_silicon_seed() << std::endl;
+    //   std::cout << "TrackingEvaluator_hp::print_track - tpc seed id: " << track->get_tpc_seed() << std::endl;
+    std::cout << " MVTX cluster keys: " << get_detector_cluster_keys<TrkrDefs::mvtxId>(track) << std::endl;
+    std::cout << " INTT cluster keys: " << get_detector_cluster_keys<TrkrDefs::inttId>(track) << std::endl;
+    std::cout << " TPOT cluster keys: " << get_detector_cluster_keys<TrkrDefs::micromegasId>(track) << std::endl;
+    std::cout << " TPC cluster keys: " << get_detector_cluster_keys<TrkrDefs::tpcId>(track) << std::endl;
+  }
 
   // print MVTX cluster keys
   if( false )
@@ -1536,9 +1540,9 @@ void TrackingEvaluator_hp::print_track(SvtxTrack* track) const
     }
   }
 
-  // also print the TPC tracks states
   if( true )
   {
+    // print track states
     for( auto iter = track->begin_states(); iter != track->end_states(); ++iter )
     {
       const auto& [pathlenght, state] = *iter;
@@ -1547,15 +1551,18 @@ void TrackingEvaluator_hp::print_track(SvtxTrack* track) const
         << " layer: " << (int)TrkrDefs::getLayer(state->get_cluskey())
         << " position: (" << state->get_x() << "," << state->get_y() << "," << state->get_z() << ")"
         << " momentum: (" << state->get_px() << "," << state->get_py() << "," << state->get_px() << ")"
-        << " covariance:"
         << std::endl;
-      for( int i = 0; i<6; ++i )
+      if( false )
       {
-        for( int j=0; j<6; ++j )
+        std::cout << " covariance:" << std::endl;
+        for( int i = 0; i<6; ++i )
         {
-          std::cout << "  " << state->get_error(i,j);
+          for( int j=0; j<6; ++j )
+          {
+            std::cout << "  " << state->get_error(i,j);
+          }
+          std::cout << std::endl;
         }
-        std::cout << std::endl;
       }
     }
   }

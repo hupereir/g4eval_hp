@@ -720,7 +720,7 @@ class TrackingEvaluator_hp : public SubsysReco
   void print_tracks() const;
 
   //! print cluster and association
-  void print_cluster( TrkrDefs::cluskey, TrkrCluster* ) const;
+  void print_cluster( TrkrDefs::cluskey, TrkrCluster*, short int /*crossing*/ = 0 ) const;
 
   //! print track content
   void print_track( SvtxTrack* ) const;
