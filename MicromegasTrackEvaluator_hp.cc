@@ -264,20 +264,30 @@ namespace
   }
 
 
-  //* converninece trait for underlying type
+  //! converninece trait for underlying type
   template<class T>
     using underlying_type_t = typename std::underlying_type<T>::type;
 
-  //* convert an strong type enum to integral type
+  //! convert an strong type enum to integral type
   template<class T>
     constexpr underlying_type_t<T>
     to_underlying_type(T value) noexcept
   { return static_cast<underlying_type_t<T>>(value);}
 
-  // TVector3 streamer
+  //! TVector3 streamer
   inline std::ostream& operator << (std::ostream& out, const TVector3& v )
   {
     out << "(" << v.x() << ", " << v.y() << ", " << v.z() << ")";
+    return out;
+  }
+
+  //! track state streamer
+  inline std::ostream& operator << (std::ostream& out, const MicromegasTrackEvaluator_hp::TrackStateStruct& s )
+  {
+    out
+      << "layer: " << s._layer << " tile: " << s._tile
+      << " local: (" << s._x_local << ", " << s._y_local << ")"
+      << " global: (" << s._x << ", " << s._y << ", " << s._z << ")";
     return out;
   }
 
@@ -496,8 +506,42 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
         {
           const unsigned int layer = TrkrDefs::getLayer(cluster_key);
           const auto cluster = m_cluster_map->findCluster(cluster_key);
-          if( layer == 55 ) track_struct._found_cluster_phi = create_cluster(cluster_key,cluster);
-          if( layer == 56 ) track_struct._found_cluster_z = create_cluster(cluster_key,cluster);
+
+          // also get matching track state
+          TrackStateStruct trk_state;
+          auto iter =  std::find_if( track->begin_states(), track->end_states(),
+            [cluster_key]( const auto& pair )
+          { return pair.second->get_cluskey() == cluster_key; } );
+
+          if( iter != track->end_states() )
+          {
+            std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks - adding acts track state" << std::endl;
+
+            trk_state._layer = layer;
+            trk_state._tile = MicromegasDefs::getTileId(cluster_key);
+
+            const auto& state = iter->second;
+
+            trk_state._x_local = state->get_localX();
+            trk_state._y_local = state->get_localY();
+
+            trk_state._x = state->get_x();
+            trk_state._y = state->get_y();
+            trk_state._z = state->get_z();
+          }
+
+          if( layer == 55 )
+          {
+            track_struct._found_cluster_phi = create_cluster(cluster_key,cluster);
+            track_struct._acts_trk_state_phi = trk_state;
+          }
+
+          if( layer == 56 )
+          {
+            track_struct._found_cluster_z = create_cluster(cluster_key,cluster);
+            track_struct._acts_trk_state_z = trk_state;
+          }
+
           break;
         }
 
@@ -568,11 +612,6 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
         TrackFitUtils::line_fit_xy(global_positions_silicon):
         TrackFitUtils::line_fit_xy(global_positions);
 
-//       std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks -"
-//         << " slope_xy: " << slope_xy
-//         << " intersect_xy: " << intersect_xy
-//         << std::endl;
-
     } else {
 
       // x,y circle
@@ -635,9 +674,7 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
         continue;
       }
 
-      // now perform planar intersection
-      /* note: in principle we could use the ACTS fit to do that */
-
+      // now perform extrapolation to actual tile
       // get tile center and norm vector
       const auto tile_center = layergeom->get_world_from_local_coords(tileid, m_tGeometry, {0, 0});
       const double x0 = tile_center.x();
@@ -693,7 +730,6 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
         { continue; }
 
       } else {
-
 
         auto phi_range = layergeom->get_phi_range(tileid, m_tGeometry);
         double t_min = phi_range.first;
@@ -773,6 +809,22 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
       track_struct._trk_state_phi._tile !=
       track_struct._trk_state_z._tile )
     { continue; }
+
+    // some checks
+    if( Verbosity() )
+    {
+      if( track_struct._trk_state_phi._layer>0 &&  track_struct._acts_trk_state_phi._layer>0 )
+      {
+        std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks -" << "_trk_state_phi: " << track_struct._trk_state_phi << std::endl;
+        std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks -" << "_acts_trk_state_phi: " << track_struct._acts_trk_state_phi << std::endl;
+      }
+
+      if( track_struct._trk_state_z._layer>0 &&  track_struct._acts_trk_state_z._layer>0 )
+      {
+        std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks -" << "_trk_state_z: " << track_struct._trk_state_z << std::endl;
+        std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks -" << "_acts_trk_state_z: " << track_struct._acts_trk_state_z << std::endl;
+      }
+    }
 
     // print
     if( Verbosity() )

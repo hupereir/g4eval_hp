@@ -151,6 +151,12 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
     // track state extrapolated to z layer
     TrackStateStruct _trk_state_z;
 
+    // track state extrapolated to phi layer
+    TrackStateStruct _acts_trk_state_phi;
+
+    // track state extrapolated to z layer
+    TrackStateStruct _acts_trk_state_z;
+
     // all micromegas clusters in track
     ClusterStruct::List _clusters;
 
