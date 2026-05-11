@@ -515,12 +515,27 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
 
           if( iter != track->end_states() )
           {
-            std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks - adding acts track state" << std::endl;
+            // get cluster global position
+            const auto global_position = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(cluster_key, cluster, crossing);
+            const auto& state = iter->second;
+
+//             if( false )
+            {
+              std::cout
+                << "MicromegasTrackEvaluator_hp::evaluate_tracks -"
+                << " track: " << track_id
+                << " adding acts track state"
+                << " key: " << cluster_key
+                << " layer: " << layer
+                //               << " cluster: (" << global_position.x() << ", " << global_position.y() << ", " << global_position.z() << ")"
+                //               << " state: (" << state->get_x() << ", " << state->get_y() << ", " << state->get_z() << ")"
+                << " cluster: (" << cluster->getLocalX() << ", " << cluster->getLocalY() << ")"
+                << " state: (" << state->get_localX() << ", " << state->get_localY() << ")"
+                << std::endl;
+            }
 
             trk_state._layer = layer;
             trk_state._tile = MicromegasDefs::getTileId(cluster_key);
-
-            const auto& state = iter->second;
 
             trk_state._x_local = state->get_localX();
             trk_state._y_local = state->get_localY();
@@ -851,6 +866,30 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
     // update found cluster accepted flags
     track_struct._found_cluster_phi._accepted = accept_cluster( track_struct, track_struct._found_cluster_phi );
     track_struct._found_cluster_z._accepted = accept_cluster( track_struct, track_struct._found_cluster_z );
+
+    if( track_struct._found_cluster_phi._accepted && track_struct._trk_state_phi._layer != 0 )
+    {
+      std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks -"
+        << " track: " << track_id
+        << " layer: " << track_struct._trk_state_phi._layer
+        << " drphi: " << track_struct._trk_state_phi._x_local - track_struct._found_cluster_phi._x_local
+        << " dz: " << track_struct._trk_state_phi._y_local - track_struct._found_cluster_phi._y_local
+        << " cluster rphi: " << get_r( track_struct._found_cluster_phi._x, track_struct._found_cluster_phi._y )*std::atan2( track_struct._found_cluster_phi._y, track_struct._found_cluster_phi._x )
+        << " cluster z: " << track_struct._found_cluster_phi._z
+        << std::endl;
+    }
+
+    if( track_struct._found_cluster_z._accepted && track_struct._trk_state_z._layer != 0 )
+    {
+      std::cout << "MicromegasTrackEvaluator_hp::evaluate_tracks -"
+        << " track: " << track_id
+        << " layer: " << track_struct._trk_state_z._layer
+        << " drphi: " << track_struct._trk_state_z._x_local - track_struct._found_cluster_z._x_local
+        << " dz: " << track_struct._trk_state_z._y_local - track_struct._found_cluster_z._y_local
+        << " cluster rphi: " << get_r( track_struct._found_cluster_z._x, track_struct._found_cluster_z._y )*std::atan2( track_struct._found_cluster_z._y, track_struct._found_cluster_z._x )
+        << " cluster z: " << track_struct._found_cluster_z._z
+        << std::endl;
+    }
 
     m_container->add_track( track_struct );
   }
