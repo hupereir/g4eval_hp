@@ -318,6 +318,7 @@ class TrackingEvaluator_hp : public SubsysReco
     float _r = 0;
 
     float _eta = 0;
+    float _theta = 0;
     float _phi = 0;
   };
 
