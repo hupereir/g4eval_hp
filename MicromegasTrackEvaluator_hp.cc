@@ -516,7 +516,7 @@ void MicromegasTrackEvaluator_hp::evaluate_tracks()
           if( iter != track->end_states() )
           {
             // get cluster global position
-            const auto global_position = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(cluster_key, cluster, crossing);
+//             const auto global_position = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(cluster_key, cluster, crossing);
             const auto& state = iter->second;
 
 //             if( false )

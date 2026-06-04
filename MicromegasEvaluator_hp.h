@@ -24,16 +24,16 @@ class MicromegasEvaluator_hp : public SubsysReco
   MicromegasEvaluator_hp( const std::string& = "MicromegasEvaluator_hp" );
 
   /// global initialization
-  virtual int Init(PHCompositeNode*);
+  int Init(PHCompositeNode*) override;
 
   /// run initialization
-  virtual int InitRun(PHCompositeNode*);
+  int InitRun(PHCompositeNode*) override;
 
   /// event processing
-  virtual int process_event(PHCompositeNode*);
+  int process_event(PHCompositeNode*) override;
 
   /// end of processing
-  virtual int End(PHCompositeNode*);
+  int End(PHCompositeNode*) override;
 
   // tile information
   class TileStruct
@@ -150,7 +150,7 @@ class MicromegasEvaluator_hp : public SubsysReco
     Container& operator = ( const Container& ) = delete;
 
     /// reset
-    virtual void Reset();
+    void Reset() override;
 
     ///@name accessors
     //@{
@@ -201,7 +201,7 @@ class MicromegasEvaluator_hp : public SubsysReco
     /// hits array
     HitStruct::List _hits;
 
-    ClassDef(Container,1)
+    ClassDefOverride(Container,1)
 
   };
 

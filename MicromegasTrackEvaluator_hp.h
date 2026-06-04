@@ -29,16 +29,16 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
   MicromegasTrackEvaluator_hp( const std::string& = "MicromegasTrackEvaluator_hp" );
 
   /// global initialization
-  virtual int Init(PHCompositeNode*);
+  int Init(PHCompositeNode*) override;
 
   /// run initialization
-  virtual int InitRun(PHCompositeNode*);
+  int InitRun(PHCompositeNode*) override;
 
   /// event processing
-  virtual int process_event(PHCompositeNode*);
+  int process_event(PHCompositeNode*) override;
 
   /// end of processing
-  virtual int End(PHCompositeNode*);
+  int End(PHCompositeNode*) override;
 
   /// use silidon only for the extrapolation
   void set_extrapolate_from_silicon( bool value )
@@ -189,7 +189,7 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
     Container& operator = ( const Container& ) = delete;
 
     //! reset
-    virtual void Reset();
+    void Reset() override;
 
     //!@name accessors
     //@{
@@ -221,7 +221,7 @@ class MicromegasTrackEvaluator_hp : public SubsysReco
     /* it is only added here so that the dictionary is available in root file */
     TrackStateStruct _unused_trk_state;
 
-    ClassDef(Container,1)
+    ClassDefOverride(Container,1)
 
   };
 

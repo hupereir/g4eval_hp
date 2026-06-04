@@ -42,6 +42,7 @@ pkginclude_HEADERS = \
   MicromegasEvaluator_hp.h \
   MicromegasGeometryContainer.h \
   MicromegasTrackEvaluator_hp.h \
+  MultiplicityEvaluator_hp.h \
   PHPythia8_hp.h \
   SimEvaluator_hp.h \
   TrackingEvaluator_hp.h \
@@ -52,6 +53,7 @@ ROOTDICTS = \
   MicromegasEvaluator_hp_Dict.cc \
   MicromegasGeometryContainer_Dict.cc \
   MicromegasTrackEvaluator_hp_Dict.cc \
+  MultiplicityEvaluator_hp_Dict.cc \
   PHPythia8_hp_Dict.cc \
   SimEvaluator_hp_Dict.cc \
   TrackingEvaluator_hp_Dict.cc \
@@ -63,6 +65,7 @@ nobase_dist_pcm_DATA = \
   MicromegasEvaluator_hp_Dict_rdict.pcm \
   MicromegasGeometryContainer_Dict_rdict.pcm \
   MicromegasTrackEvaluator_hp_Dict_rdict.pcm \
+  MultiplicityEvaluator_hp_Dict_rdict.pcm \
   PHPythia8_hp_Dict_rdict.pcm \
 	 SimEvaluator_hp_Dict_rdict.pcm \
   TrackingEvaluator_hp_Dict_rdict.pcm \
@@ -75,6 +78,7 @@ libg4eval_hp_la_SOURCES = \
   MicromegasEvaluator_hp.cc \
   MicromegasGeometryContainer.cc \
   MicromegasTrackEvaluator_hp.cc \
+  MultiplicityEvaluator_hp.cc \
   PHPythia8_hp.cc \
   SimEvaluator_hp.cc \
   TrackingEvaluator_hp.cc \

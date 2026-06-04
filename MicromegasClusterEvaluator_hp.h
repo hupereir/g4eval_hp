@@ -28,16 +28,16 @@ class MicromegasClusterEvaluator_hp : public SubsysReco
   MicromegasClusterEvaluator_hp( const std::string& = "MicromegasClusterEvaluator_hp" );
 
   /// global initialization
-  virtual int Init(PHCompositeNode*);
+  int Init(PHCompositeNode*) override;
 
   /// run initialization
-  virtual int InitRun(PHCompositeNode*);
+  int InitRun(PHCompositeNode*) override;
 
   /// event processing
-  virtual int process_event(PHCompositeNode*);
+  int process_event(PHCompositeNode*) override;
 
   /// end of processing
-  virtual int End(PHCompositeNode*);
+  int End(PHCompositeNode*) override;
 
   /// set default pedestal
   void set_default_pedestal( double value )
@@ -92,7 +92,7 @@ class MicromegasClusterEvaluator_hp : public SubsysReco
 
     public:
 
-    void Reset();
+    void Reset() override;
 
     // number of signal waveforms
     unsigned short n_waveforms_signal = 0;
@@ -127,7 +127,7 @@ class MicromegasClusterEvaluator_hp : public SubsysReco
     // MBD information
     MbdInfo mbd_info;
 
-    ClassDef(Container,1)
+    ClassDefOverride(Container,1)
 
   };
 

@@ -61,12 +61,12 @@ class PHPythia8_hp : public SubsysReco, public PHHepMCGenHelper
     Container& operator = ( const Container& ) = delete;
 
     //! reset
-    virtual void Reset();
+    void Reset() override;
 
     ParticleStruct _mother;
     ParticleStruct _daughter[2];
 
-    ClassDef(Container,1)
+    ClassDefOverride(Container,1)
 
   };
 
