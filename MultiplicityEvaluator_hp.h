@@ -4,6 +4,9 @@
 #include <fun4all/SubsysReco.h>
 #include <phool/PHObject.h>
 
+#include <micromegas/MicromegasDefs.h>
+#include <micromegas/MicromegasMapping.h>
+
 class MultiplicityEvaluator_hp: public SubsysReco
 {
   public:
@@ -25,6 +28,7 @@ class MultiplicityEvaluator_hp: public SubsysReco
     public:
 
     using List = std::vector<MultiplicityStruct>;
+    using Array = std::array<MultiplicityStruct, MicromegasDefs::m_nfee>;
 
     uint _rawhits = 0;
     uint _hits = 0;
@@ -49,29 +53,41 @@ class MultiplicityEvaluator_hp: public SubsysReco
     /// assignment operator
     Container& operator = ( const Container& ) = delete;
 
-//     /// reset
-//     virtual void Reset()
-//     {}
+    /// reset
+    void Reset() override
+    {}
 
     //!@name accessors
     //@{
     const MultiplicityStruct& current_multiplicity() const { return _mult; }
     const MultiplicityStruct& previous_multiplicity() const { return _prev_mult; }
+
+    const MultiplicityStruct& current_det_multiplicity(int index) const { return _det_mult[index]; }
+    const MultiplicityStruct& previous_det_multiplicity(int index) const { return _prev_det_mult[index]; }
     //}
 
     //!@name modifiers
     //@{
     void set_current_multiplicity( const MultiplicityStruct& mult ) { _mult = mult; }
     void set_previous_multiplicity( const MultiplicityStruct& mult ) { _prev_mult = mult; }
+
+    void set_current_det_multiplicity( int index, const MultiplicityStruct& mult ) { _det_mult[index] = mult; }
+    void set_previous_det_multiplicity( int index, const MultiplicityStruct& mult ) { _prev_det_mult[index] = mult; }
     //@}
 
     private:
 
     // current event multiplicities
-    MultiplicityStruct _mult;
+    MultiplicityStruct _mult = {};
 
     // previous event multiplicities
-    MultiplicityStruct _prev_mult;
+    MultiplicityStruct _prev_mult = {};
+
+    // detector segmented multiplicities
+    MultiplicityStruct::Array _det_mult = {};
+
+    // detector segmented multiplicities
+    MultiplicityStruct::Array _prev_det_mult = {};
 
     ClassDefOverride(Container,1)
 
@@ -79,8 +95,8 @@ class MultiplicityEvaluator_hp: public SubsysReco
 
   private:
 
-  //! evaluation node
-  Container* m_container = nullptr;
+  MicromegasMapping m_mapping;
+
 
 };
 

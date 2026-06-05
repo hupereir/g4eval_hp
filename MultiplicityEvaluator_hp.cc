@@ -1,6 +1,8 @@
 #include "MultiplicityEvaluator_hp.h"
 
+#include <ffarawobjects/MicromegasRawHit.h>
 #include <ffarawobjects/MicromegasRawHitContainer.h>
+#include <ffarawobjects/Gl1Packet.h>
 #include <fun4all/Fun4AllReturnCodes.h>
 
 #include <phool/getClass.h>
@@ -15,7 +17,6 @@
 //_____________________________________________________________________
 namespace
 {
-
   //! range adaptor to be able to use range-based for loop
   template<class T> class range_adaptor
   {
@@ -71,22 +72,47 @@ int MultiplicityEvaluator_hp::process_event(PHCompositeNode* topNode)
 {
 
   // current event multiplicity
-  MultiplicityStruct current_mult_struct;
+  MultiplicityStruct current_mult;
+  MultiplicityStruct::Array det_mult;
 
   // get BCO from gl1
-  auto gl1rawhit = findNode::getClass<Gl1RawHit>(topNode,"GL1RAWHIT");
+  auto gl1rawhit = findNode::getClass<Gl1Packet>(topNode,"GL1RAWHIT");
   if( gl1rawhit )
   {
-    current_mult_struct._gtm_bco = gl1rawhit->get_bco()&0xFFFFFFFFFF;
+
+    current_mult._gtm_bco = gl1rawhit->getBCO()&0xFFFFFFFFFF;
+    for( auto&& mult:det_mult ) { mult._gtm_bco = gl1rawhit->getBCO()&0xFFFFFFFFFF; }
+
   } else {
+
     std::cout << "MultiplicityEvaluator_hp::process_event - GL1RAWHIT not found" << std::endl;
+
   }
+
+  auto get_det_id = []( int layer, int tile ) { return (layer-55)*MicromegasDefs::m_ntiles + tile; };
 
   // raw hits multiplicity
   auto rawhitcontainer = findNode::getClass<MicromegasRawHitContainer>(topNode, "MICROMEGASRAWHIT" );
   if( rawhitcontainer )
   {
-    current_mult_struct._rawhits =  rawhitcontainer->get_nhits();
+
+    current_mult._rawhits =  rawhitcontainer->get_nhits();
+
+    for( unsigned int i = 0; i < rawhitcontainer->get_nhits(); ++i )
+    {
+      // get hit, fee, hitsetkey, tile and layer
+      const auto& rawhit = rawhitcontainer->get_hit(i);
+      const int fee = m_mapping.get_new_fee_id(rawhit->get_fee());
+      const TrkrDefs::hitsetkey hitsetkey = m_mapping.get_hitsetkey(fee);
+
+      const int layer = int(TrkrDefs::getLayer(hitsetkey));
+      const int tile = int(MicromegasDefs::getTileId(hitsetkey));
+      const int detid = get_det_id( layer, tile );
+
+      // increment count
+      ++det_mult[detid]._rawhits;
+    }
+
   } else {
     std::cout << "MultiplicityEvaluator_hp::process_event - MICROMEGASRAWHIT not found" << std::endl;
   }
@@ -95,34 +121,57 @@ int MultiplicityEvaluator_hp::process_event(PHCompositeNode* topNode)
   auto hitsetcontainer = findNode::getClass<TrkrHitSetContainer>(topNode, "TRKR_HITSET");
   if( hitsetcontainer )
   {
+
     // loop over all TPOT hitsets
     for( const auto& [hitsetkey, hitset]:range_adaptor( hitsetcontainer->getHitSets(TrkrDefs::micromegasId ) ) )
     {
-      current_mult_struct._hits += hitset->size();
+      // increment total hit multiplicity
+      current_mult._hits += hitset->size();
+
+      // increment per detector hit multiplicity
+      const int layer = int(TrkrDefs::getLayer(hitsetkey));
+      const int tile = int(MicromegasDefs::getTileId(hitsetkey));
+      const int detid = get_det_id( layer, tile );
+      det_mult[detid]._hits += hitset->size();
     }
+
   } else {
+
     std::cout << "MultiplicityEvaluator_hp::process_event - TRKR_HITSET not found" << std::endl;
+
   }
 
   // clusters
   auto cluster_map = findNode::getClass<TrkrClusterContainer>(topNode, "TRKR_CLUSTER");
   if( cluster_map )
   {
+
     // loop over TPOT hitset keys
     for( const auto& hitsetkey:cluster_map->getHitSetKeys(TrkrDefs::micromegasId) )
     {
       const auto& range = cluster_map->getClusters(hitsetkey);
-      current_mult_struct._clusters += std::distance( range.first, range.second );
+      const auto& clusters = std::distance( range.first, range.second );
+      current_mult._clusters += clusters;
+
+      // increment per detector hit multiplicity
+      const int layer = int(TrkrDefs::getLayer(hitsetkey));
+      const int tile = int(MicromegasDefs::getTileId(hitsetkey));
+      const int detid = get_det_id( layer, tile );
+      det_mult[detid]._clusters += clusters;
     }
+
   } else {
+
     std::cout << "MultiplicityEvaluator_hp::process_event - TRKR_CLUSTER not found" << std::endl;
+
   }
 
   // update container
-  if( m_container )
+  auto container = findNode::getClass<Container>(topNode, "MultiplicityEvaluator_hp::Container");
+  if( container )
   {
-    m_container->set_previous_multiplicity( m_container->current_multiplicity() );
-    m_container->set_current_multiplicity( current_mult_struct );
+    container->set_previous_multiplicity( container->current_multiplicity() );
+    container->set_current_multiplicity( current_mult );
   } else {
     std::cout << "MultiplicityEvaluator_hp::process_event - m_container not found" << std::endl;
   }
