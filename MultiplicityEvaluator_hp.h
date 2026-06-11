@@ -30,7 +30,13 @@ class MultiplicityEvaluator_hp: public SubsysReco
     using List = std::vector<MultiplicityStruct>;
     using Array = std::array<MultiplicityStruct, MicromegasDefs::m_nfee>;
 
+    // hit samples
+    using sample_list_t = std::vector<uint16_t>;
+    sample_list_t _rawhit_samples;
+    sample_list_t _hit_samples;
+
     uint _rawhits = 0;
+    uint _rawhits_truncated = 0;
     uint _hits = 0;
     uint _clusters = 0;
 
@@ -62,8 +68,8 @@ class MultiplicityEvaluator_hp: public SubsysReco
     const MultiplicityStruct& current_multiplicity() const { return _mult; }
     const MultiplicityStruct& previous_multiplicity() const { return _prev_mult; }
 
-    const MultiplicityStruct& current_det_multiplicity(int index) const { return _det_mult[index]; }
-    const MultiplicityStruct& previous_det_multiplicity(int index) const { return _prev_det_mult[index]; }
+    const MultiplicityStruct::Array& current_det_multiplicity() const { return _det_mult; }
+    const MultiplicityStruct::Array& previous_det_multiplicity() const { return _prev_det_mult; }
     //}
 
     //!@name modifiers
@@ -71,8 +77,8 @@ class MultiplicityEvaluator_hp: public SubsysReco
     void set_current_multiplicity( const MultiplicityStruct& mult ) { _mult = mult; }
     void set_previous_multiplicity( const MultiplicityStruct& mult ) { _prev_mult = mult; }
 
-    void set_current_det_multiplicity( int index, const MultiplicityStruct& mult ) { _det_mult[index] = mult; }
-    void set_previous_det_multiplicity( int index, const MultiplicityStruct& mult ) { _prev_det_mult[index] = mult; }
+    void set_current_det_multiplicity( const MultiplicityStruct::Array& mult ) { _det_mult = mult; }
+    void set_previous_det_multiplicity( const MultiplicityStruct::Array& mult ) { _prev_det_mult = mult; }
     //@}
 
     private:

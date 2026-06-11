@@ -97,7 +97,6 @@ int MultiplicityEvaluator_hp::process_event(PHCompositeNode* topNode)
   {
 
     current_mult._rawhits =  rawhitcontainer->get_nhits();
-
     for( unsigned int i = 0; i < rawhitcontainer->get_nhits(); ++i )
     {
       // get hit, fee, hitsetkey, tile and layer
@@ -111,6 +110,17 @@ int MultiplicityEvaluator_hp::process_event(PHCompositeNode* topNode)
 
       // increment count
       ++det_mult[detid]._rawhits;
+
+      // add samples
+      const auto sample = rawhit->get_sample_begin();
+      current_mult._rawhit_samples.emplace_back( sample );
+      det_mult[detid]._rawhit_samples.emplace_back( sample );
+
+      if( sample < 1024 )
+      {
+        ++current_mult._rawhits_truncated;
+        ++det_mult[detid]._rawhits_truncated;
+      }
     }
 
   } else {
@@ -133,11 +143,20 @@ int MultiplicityEvaluator_hp::process_event(PHCompositeNode* topNode)
       const int tile = int(MicromegasDefs::getTileId(hitsetkey));
       const int detid = get_det_id( layer, tile );
       det_mult[detid]._hits += hitset->size();
+
+      // loop over hits
+      for( const auto& [hitkey,hit]:range_adaptor( hitset->getHits() ) )
+      {
+        const auto sample = MicromegasDefs::getSample(hitkey);
+        current_mult._hit_samples.emplace_back( sample );
+        det_mult[detid]._hit_samples.emplace_back( sample );
+      }
+
     }
 
   } else {
 
-    std::cout << "MultiplicityEvaluator_hp::process_event - TRKR_HITSET not found" << std::endl;
+    // std::cout << "MultiplicityEvaluator_hp::process_event - TRKR_HITSET not found" << std::endl;
 
   }
 
@@ -162,7 +181,7 @@ int MultiplicityEvaluator_hp::process_event(PHCompositeNode* topNode)
 
   } else {
 
-    std::cout << "MultiplicityEvaluator_hp::process_event - TRKR_CLUSTER not found" << std::endl;
+    // std::cout << "MultiplicityEvaluator_hp::process_event - TRKR_CLUSTER not found" << std::endl;
 
   }
 
@@ -172,6 +191,10 @@ int MultiplicityEvaluator_hp::process_event(PHCompositeNode* topNode)
   {
     container->set_previous_multiplicity( container->current_multiplicity() );
     container->set_current_multiplicity( current_mult );
+
+    container->set_previous_det_multiplicity( container->current_det_multiplicity() );
+    container->set_current_det_multiplicity( det_mult );
+
   } else {
     std::cout << "MultiplicityEvaluator_hp::process_event - m_container not found" << std::endl;
   }
