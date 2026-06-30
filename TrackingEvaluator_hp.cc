@@ -704,6 +704,8 @@ int TrackingEvaluator_hp::Init(PHCompositeNode* topNode )
 //_____________________________________________________________________
 int TrackingEvaluator_hp::InitRun(PHCompositeNode* topNode)
 {
+  // load nodes
+  load_nodes(topNode);
 
   // TPC geometry (to check ADC clock frequency)
   auto geom = findNode::getClass<PHG4TpcGeomContainer>(topNode, "TPCGEOMCONTAINER");
@@ -716,11 +718,10 @@ int TrackingEvaluator_hp::InitRun(PHCompositeNode* topNode)
   {
     // initialize cluster mover
     std::cout << "TrackingEvaluator_hp::Init - initializing TpcClusterMover" << std::endl;
-    m_tpcClusterMover.initialize_geometry(geom);
+    m_tpcClusterMover.initialize_geometry(geom, m_tGeometry);
   }
 
   // print micromegas geometry
-  load_nodes(topNode);
   print_micromegas_geometry();
 
   return Fun4AllReturnCodes::EVENT_OK;

@@ -628,6 +628,10 @@ class TrackingEvaluator_hp : public SubsysReco
   void set_flags( int flags )
   { m_flags = flags; }
 
+  //! cluster map name
+  void set_clustermapname( const std::string& value )
+  { m_clustermapname = value; }
+
   //! track map name
   void set_trackmapname( const std::string& value )
   { m_trackmapname = value; }
@@ -803,6 +807,9 @@ class TrackingEvaluator_hp : public SubsysReco
 
   //! hits
   TrkrHitSetContainer* m_hitsetcontainer = nullptr;
+
+  //! cluster map name
+  std::string m_clustermapname = "TRKR_CLUSTER";
 
   //! clusters
   TrkrClusterContainer* m_cluster_map = nullptr;
