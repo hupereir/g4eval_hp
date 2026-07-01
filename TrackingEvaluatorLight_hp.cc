@@ -462,7 +462,7 @@ void TrackingEvaluatorLight_hp::Container::Reset()
 TrackingEvaluatorLight_hp::TrackingEvaluatorLight_hp( const std::string& name ):
   SubsysReco( name),
   m_calo_min_energy( {
-    {SvtxTrack::CEMC, 0.15},
+    {SvtxTrack::CEMC, 0},
     {SvtxTrack::HCALIN, 0},
     {SvtxTrack::HCALOUT, 0},
     {TOPO_HCAL, 0}
@@ -520,14 +520,27 @@ int TrackingEvaluatorLight_hp::InitRun(PHCompositeNode* topNode)
 }
 
 //_____________________________________________________________________
-int TrackingEvaluatorLight_hp::process_event(PHCompositeNode* topNode)
+int TrackingEvaluatorLight_hp::process_event(PHCompositeNode* /*topNode*/)
 {
-  // load nodes
-  const auto res =  load_nodes(topNode);
-  if( res != Fun4AllReturnCodes::EVENT_OK ) return res;
+//   // load nodes
+//   const auto res =  load_nodes(topNode);
+//   if( res != Fun4AllReturnCodes::EVENT_OK ) return res;
 
   // cleanup output
   if( m_container ) m_container->Reset();
+
+  // print calorimeter cluster statistics
+  for( const auto& [layer,container]:m_rawclustercontainermap )
+  {
+    if( container )
+    {
+      const auto clusters = container->getClusters();
+      std::cout << "TrackingEvaluatorLight_hp::process_event -"
+        << " layer: " << m_calo_names.at(layer)
+        << " clusters: " << std::distance( clusters.first, clusters.second )
+        << std::endl;
+    }
+  }
 
   fill_g4particle_map();
   evaluate_tracks();
@@ -688,6 +701,7 @@ int TrackingEvaluatorLight_hp::load_nodes( PHCompositeNode* topNode )
       auto clusterContainer = findNode::getClass<RawClusterContainer>(topNode, clusterNodeName.c_str());
       if( clusterContainer )
       {
+        std::cout << "TrackingEvaluatorLight_hp::load_nodes - found " << clusterNodeName << std::endl;
         m_rawclustercontainermap.emplace( calo_layer, clusterContainer );
         break;
       }
@@ -700,7 +714,10 @@ int TrackingEvaluatorLight_hp::load_nodes( PHCompositeNode* topNode )
     auto clusterContainer = findNode::getClass<RawClusterContainer>(topNode, clusterNodeName.c_str());
     if( clusterContainer )
     {
+      std::cout << "TrackingEvaluatorLight_hp::load_nodes - found " << clusterNodeName << std::endl;
       m_rawclustercontainermap.emplace( TOPO_HCAL, clusterContainer );
+    } else {
+      std::cout << "TrackingEvaluatorLight_hp::load_nodes - " << clusterNodeName << " not found."<< std::endl;
     }
   }
 
