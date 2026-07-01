@@ -661,7 +661,7 @@ void TrackingEvaluator_hp::Container::Reset()
 TrackingEvaluator_hp::TrackingEvaluator_hp( const std::string& name ):
   SubsysReco( name),
   m_calo_min_energy( {
-    {SvtxTrack::CEMC, 0.15},
+    {SvtxTrack::CEMC, 0},
     {SvtxTrack::HCALIN, 0},
     {SvtxTrack::HCALOUT, 0},
     {TOPO_HCAL, 0}
@@ -1168,7 +1168,10 @@ void TrackingEvaluator_hp::evaluate_tracks()
     {
       std::cout << "TrackingEvaluator_hp::evaluate_tracks - invalid crossing, track ignored." << std::endl;
       continue;
+//     } else {
+//       std::cout << "TrackingEvaluator_hp::evaluate_tracks - crossing: " << crossing << std::endl;
     }
+
 
     track_struct._crossing = crossing;
 
