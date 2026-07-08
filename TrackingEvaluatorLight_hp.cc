@@ -1135,13 +1135,16 @@ std::optional<TrackingEvaluatorLight_hp::CaloClusterStruct> TrackingEvaluatorLig
     const TVector3 clus_vector = position_cluster-position_before;
     const auto lambda = clus_vector.Dot(track_vector)/track_vector.Mag2();
 
-    std::cout << "TrackingEvaluatorLight_hp::evaluate_tracks -"
-      << " calo_layer: " << calo_layer
-      << " cluster_r: " << cluster_r
-      << " state_r_before: " << state_r_before
-      << " state_r_after: " << state_r_after
-      << " lambda: " << lambda
-      << std::endl;
+    if( Verbosity() )
+    {
+      std::cout << "TrackingEvaluatorLight_hp::evaluate_tracks -"
+        << " calo_layer: " << calo_layer
+        << " cluster_r: " << cluster_r
+        << " state_r_before: " << state_r_before
+        << " state_r_after: " << state_r_after
+        << " lambda: " << lambda
+        << std::endl;
+    }
 
     const TVector3 position_closest = position_before*(1.-lambda) + position_after*lambda;
     const auto d = (position_closest-position_cluster).Mag2();
