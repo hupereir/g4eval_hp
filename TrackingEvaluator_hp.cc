@@ -718,7 +718,7 @@ int TrackingEvaluator_hp::InitRun(PHCompositeNode* topNode)
   {
     // initialize cluster mover
     std::cout << "TrackingEvaluator_hp::Init - initializing TpcClusterMover" << std::endl;
-    m_tpcClusterMover.initialize_geometry(geom, m_tGeometry);
+    m_tpcClusterMover.initialize_geometry(geom, m_tGeometry, topNode);
   }
 
   // print micromegas geometry
@@ -1410,9 +1410,10 @@ void TrackingEvaluator_hp::print_cluster( TrkrDefs::cluskey ckey, TrkrCluster* c
   // convert to global coordinates
   const auto global = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(ckey, cluster, crossing);
 
-  if( false )
+  if( true )
   {
     std::cout << "TrackingEvaluator_hp::print_cluster - cluster: " << ckey
+      << " detector: " << int(TrkrDefs::getTrkrId( ckey ))
       << " local: (" << cluster->getLocalX() << ", " << cluster->getLocalY() << ")"
       << " global: (" << global.x() << ", " << global.y() << ", " << global.z() << ")"
       << std::endl;
