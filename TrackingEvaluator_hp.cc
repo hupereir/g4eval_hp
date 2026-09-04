@@ -714,12 +714,12 @@ int TrackingEvaluator_hp::InitRun(PHCompositeNode* topNode)
   const auto AdcClockPeriod = geom->GetFirstLayerCellGeom()->get_zstep();
   std::cout << "TrackingEvaluator_hp::Init - AdcClockPeriod: " << AdcClockPeriod << std::endl;
 
-  if( m_flags & UseTpcClusterMover )
-  {
-    // initialize cluster mover
-    std::cout << "TrackingEvaluator_hp::Init - initializing TpcClusterMover" << std::endl;
-    m_tpcClusterMover.initialize_geometry(geom, m_tGeometry, topNode);
-  }
+//   if( m_flags & UseTpcClusterMover )
+//   {
+//     // initialize cluster mover
+//     std::cout << "TrackingEvaluator_hp::Init - initializing TpcClusterMover" << std::endl;
+//     m_tpcClusterMover.initialize_geometry(geom, m_tGeometry, topNode);
+//   }
 
   // print micromegas geometry
   print_micromegas_geometry();
@@ -1208,29 +1208,29 @@ void TrackingEvaluator_hp::evaluate_tracks()
         cluster_map.emplace(cluster_key, cluster_struct);
       }
 
-      if( m_flags & UseTpcClusterMover )
-      {
-        // move back clusters to surface using TPC Cluster mover
-        using position_pair_t = std::pair<TrkrDefs::cluskey, Acts::Vector3>;
-        using position_list_t = std::vector<position_pair_t>;
-        position_list_t position_list_raw;
-        std::transform( cluster_map.begin(), cluster_map.end(), std::back_inserter( position_list_raw ),
-          []( const cluster_map_t::value_type& cluster_pair )
-        { return std::make_pair( cluster_pair.first, Acts::Vector3{cluster_pair.second._x,cluster_pair.second._y,cluster_pair.second._z} ); } );
-
-        auto position_list_moved = m_tpcClusterMover.processTrack(position_list_raw);
-
-        // reassign to original cluster map
-        for( const auto& [ckey,position]:position_list_moved )
-        {
-          auto&& cluster_struct = cluster_map.at(ckey);
-          cluster_struct._x = position.x();
-          cluster_struct._y = position.y();
-          cluster_struct._z = position.z();
-          cluster_struct._r = get_r( cluster_struct._x, cluster_struct._y );
-          cluster_struct._phi = std::atan2( cluster_struct._y, cluster_struct._x );
-        }
-      }
+//       if( m_flags & UseTpcClusterMover )
+//       {
+//         // move back clusters to surface using TPC Cluster mover
+//         using position_pair_t = std::pair<TrkrDefs::cluskey, Acts::Vector3>;
+//         using position_list_t = std::vector<position_pair_t>;
+//         position_list_t position_list_raw;
+//         std::transform( cluster_map.begin(), cluster_map.end(), std::back_inserter( position_list_raw ),
+//           []( const cluster_map_t::value_type& cluster_pair )
+//         { return std::make_pair( cluster_pair.first, Acts::Vector3{cluster_pair.second._x,cluster_pair.second._y,cluster_pair.second._z} ); } );
+//
+//         auto position_list_moved = m_tpcClusterMover.processTrack(position_list_raw);
+//
+//         // reassign to original cluster map
+//         for( const auto& [ckey,position]:position_list_moved )
+//         {
+//           auto&& cluster_struct = cluster_map.at(ckey);
+//           cluster_struct._x = position.x();
+//           cluster_struct._y = position.y();
+//           cluster_struct._z = position.z();
+//           cluster_struct._r = get_r( cluster_struct._x, cluster_struct._y );
+//           cluster_struct._phi = std::atan2( cluster_struct._y, cluster_struct._x );
+//         }
+//       }
 
       // truth information
       for( auto&& [cluster_key, cluster_struct]:cluster_map )
@@ -1386,9 +1386,18 @@ void TrackingEvaluator_hp::print_clusters() const
     for(const auto& [clusterkey,cluster]:range_adaptor(m_cluster_map->getClusters(hitsetkey)))
     {
 
-      // const auto trkrId = TrkrDefs::getTrkrId( clusterkey );
-      // if( trkrId==TrkrDefs::micromegasId )
+      const auto trkrId = TrkrDefs::getTrkrId( clusterkey );
+      if( trkrId==TrkrDefs::inttId )
       { print_cluster( clusterkey, cluster ); }
+
+      if( trkrId==TrkrDefs::mvtxId )
+      { print_cluster( clusterkey, cluster ); }
+
+//       if( trkrId==TrkrDefs::tpcId )
+//       { print_cluster( clusterkey, cluster ); }
+
+//       if( trkrId==TrkrDefs::micromegasId )
+//       { print_cluster( clusterkey, cluster ); }
     }
   }
 }
@@ -1508,7 +1517,7 @@ void TrackingEvaluator_hp::print_track(SvtxTrack* track) const
 
   // print track position and momentum
   const auto crossing = track->get_crossing();
-  if(crossing == SHRT_MAX) return;
+//  if(crossing == SHRT_MAX) return;
 
   std::cout << "TrackingEvaluator_hp::print_track - id: " << track->get_id() << std::endl;
   std::cout << "TrackingEvaluator_hp::print_track - crossing: " << crossing << std::endl;
@@ -1517,20 +1526,23 @@ void TrackingEvaluator_hp::print_track(SvtxTrack* track) const
   std::cout << "TrackingEvaluator_hp::print_track - clusters: " << get_cluster_keys( track ).size() << ", states: " << track->size_states() << std::endl;
 
   // print clusters
-  for( const auto ckey:get_cluster_keys(track) )
+  if( false )
   {
-    if( m_cluster_map )
+    for( const auto ckey:get_cluster_keys(track) )
     {
-      auto cluster = m_cluster_map->findCluster( ckey );
-      const auto global = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(ckey, cluster, crossing);
-      std::cout << " cluster: " << ckey
-        << " layer: " << (int)TrkrDefs::getLayer(ckey)
-        << " position: (" << global.x() << ", " << global.y() << ", " << global.z() << ")"
-        << std::endl;
+      if( m_cluster_map )
+      {
+        auto cluster = m_cluster_map->findCluster( ckey );
+        const auto global = m_globalPositionWrapper.getGlobalPositionDistortionCorrected(ckey, cluster, crossing);
+        std::cout << " cluster: " << ckey
+          << " layer: " << (int)TrkrDefs::getLayer(ckey)
+          << " position: (" << global.x() << ", " << global.y() << ", " << global.z() << ")"
+          << std::endl;
+      }
     }
   }
 
-  if( true )
+  if( false )
   {
     // print track states
     for( auto iter = track->begin_states(); iter != track->end_states(); ++iter )
