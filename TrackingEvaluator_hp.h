@@ -23,6 +23,7 @@ class PHG4Particle;
 class PHG4TpcGeomContainer;
 class PHG4TruthInfoContainer;
 class RawClusterContainer;
+class RawCluster;
 class SvtxTrack;
 class SvtxTrackMap;
 class SvtxTrackState;
@@ -430,7 +431,10 @@ class TrackingEvaluator_hp : public SubsysReco
     ClusterStruct::List _clusters;
 
     // associate calorimater clusters
-    CaloClusterStruct::List _calo_clusters;
+    CaloClusterStruct _calo_cluster_emcal;
+    CaloClusterStruct _calo_cluster_ihcal;
+    CaloClusterStruct _calo_cluster_ohcal;
+    CaloClusterStruct _calo_cluster_topo;
 
   };
 
@@ -613,7 +617,6 @@ class TrackingEvaluator_hp : public SubsysReco
     EvalEvent = 1<<0,
     EvalClusters = 1<<1,
     EvalTracks = 1<<2,
-    EvalTrackClusters = 1<<12,
     EvalTrackPairs = 1<<3,
     PrintClusters = 1<<4,
     PrintTracks = 1<<5,
@@ -621,7 +624,10 @@ class TrackingEvaluator_hp : public SubsysReco
     MicromegasOnly = 1<<7,
     EvalCMClusters = 1<<8,
     EvalCaloClusters = 1<<9,
-    UseTpcClusterMover = 1<<11
+    UseTpcClusterMover = 1<<11,
+    EvalTrackClusters = 1<<12,
+    EvalTrackCaloClusters = 1<<13,
+    EvalCaloTowers = 1<<14
   };
 
   //! set flags. Should be a bitwise or of Flags enum
@@ -705,6 +711,8 @@ class TrackingEvaluator_hp : public SubsysReco
 
   //! evaluate clusters
   void evaluate_clusters();
+
+  CaloClusterStruct create_calo_cluster( int /*layer*/, RawCluster* ) const;
 
   //! evaluate clusters
   void evaluate_calo_clusters();

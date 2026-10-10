@@ -37,6 +37,7 @@ libg4eval_hp_la_LIBADD = \
   -lgslcblas
 
 pkginclude_HEADERS = \
+  ClearTrackSeeds_hp.h \
   EventCounter_hp.h \
   MicromegasClusterEvaluator_hp.h \
   MicromegasEvaluator_hp.h \
@@ -73,6 +74,7 @@ nobase_dist_pcm_DATA = \
 
 libg4eval_hp_la_SOURCES = \
   $(ROOTDICTS) \
+  ClearTrackSeeds_hp.cc \
   EventCounter_hp.cc \
   MicromegasClusterEvaluator_hp.cc \
   MicromegasEvaluator_hp.cc \

@@ -13,7 +13,6 @@
 #include <g4detectors/PHG4CylinderGeomContainer.h>
 #include <g4detectors/PHG4TpcGeomContainer.h>
 #include <g4detectors/PHG4TpcGeom.h>
-
 #include <g4main/PHG4Hit.h>
 #include <g4main/PHG4Hitv1.h>
 #include <g4main/PHG4HitContainer.h>
@@ -361,38 +360,6 @@ namespace
     trackStruct._p = get_p( trackStruct._px, trackStruct._py, trackStruct._pz );
     trackStruct._pt = get_pt( trackStruct._px, trackStruct._py );
     trackStruct._eta = get_eta( trackStruct._p, trackStruct._pz );
-  }
-
-  //! create central membrane cluster struct
-  TrackingEvaluator_hp::CaloClusterStruct create_calo_cluster( int layer, RawCluster* cluster )
-  {
-    TrackingEvaluator_hp::CaloClusterStruct calo_cluster_struct;
-    calo_cluster_struct._layer = layer;
-    calo_cluster_struct._size = cluster->getNTowers();
-    calo_cluster_struct._x = cluster->get_x();
-    calo_cluster_struct._y = cluster->get_y();
-    calo_cluster_struct._z = cluster->get_z();
-
-    calo_cluster_struct._r = get_r( calo_cluster_struct._x, calo_cluster_struct._y );
-    calo_cluster_struct._phi = std::atan2( calo_cluster_struct._y, calo_cluster_struct._x );
-    calo_cluster_struct._eta = get_eta( calo_cluster_struct._x,calo_cluster_struct._y,calo_cluster_struct._z );
-
-    calo_cluster_struct._e = cluster->get_energy();
-    calo_cluster_struct._chisquare = cluster->get_chi2();
-
-    // loop over towers
-    for( const auto& [index, energy]:range_adaptor(cluster->get_towers()))
-    {
-      TrackingEvaluator_hp::TowerStruct tower;
-
-      // get indexes
-      tower._ieta = RawTowerDefs::decode_index1(index);
-      tower._iphi = RawTowerDefs::decode_index2(index);
-      tower._e = energy;
-      calo_cluster_struct._towers.emplace_back( tower );
-    }
-
-    return calo_cluster_struct;
   }
 
   //! create central membrane cluster struct
@@ -1066,6 +1033,41 @@ void TrackingEvaluator_hp::evaluate_clusters()
 }
 
 //_____________________________________________________________________
+TrackingEvaluator_hp::CaloClusterStruct TrackingEvaluator_hp::create_calo_cluster( int layer, RawCluster* cluster ) const
+{
+  TrackingEvaluator_hp::CaloClusterStruct calo_cluster_struct;
+  calo_cluster_struct._layer = layer;
+  calo_cluster_struct._size = cluster->getNTowers();
+  calo_cluster_struct._x = cluster->get_x();
+  calo_cluster_struct._y = cluster->get_y();
+  calo_cluster_struct._z = cluster->get_z();
+
+  calo_cluster_struct._r = get_r( calo_cluster_struct._x, calo_cluster_struct._y );
+  calo_cluster_struct._phi = std::atan2( calo_cluster_struct._y, calo_cluster_struct._x );
+  calo_cluster_struct._eta = get_eta( calo_cluster_struct._x,calo_cluster_struct._y,calo_cluster_struct._z );
+
+  calo_cluster_struct._e = cluster->get_energy();
+  calo_cluster_struct._chisquare = cluster->get_chi2();
+
+  if( m_flags&EvalCaloTowers )
+  {
+    // loop over towers
+    for( const auto& [index, energy]:range_adaptor(cluster->get_towers()))
+    {
+      TrackingEvaluator_hp::TowerStruct tower;
+
+      // get indexes
+      tower._ieta = RawTowerDefs::decode_index1(index);
+      tower._iphi = RawTowerDefs::decode_index2(index);
+      tower._e = energy;
+      calo_cluster_struct._towers.emplace_back( tower );
+    }
+  }
+
+  return calo_cluster_struct;
+}
+
+//_____________________________________________________________________
 void TrackingEvaluator_hp::evaluate_calo_clusters()
 {
   if(!m_container) return;
@@ -1179,7 +1181,7 @@ void TrackingEvaluator_hp::evaluate_tracks()
     track_struct._dedx = get_dedx( track->get_tpc_seed() );
     track_struct._truth_dedx = get_truth_dedx(track->get_tpc_seed(),id);
 
-    // add matching calorimeter clusters
+    // add matching clusters
     if(m_flags&EvalTrackClusters)
     {
 
@@ -1320,18 +1322,33 @@ void TrackingEvaluator_hp::evaluate_tracks()
     }
 
     // add matching calorimeter clusters
-    if(m_flags&EvalCaloClusters)
+    if(m_flags&EvalTrackCaloClusters)
     {
 
       // emcal extrapolation
       if( const auto result = find_calo_cluster_emcal(track) )
-      { track_struct._calo_clusters.push_back( result.value() ); }
+      { track_struct._calo_cluster_emcal = result.value(); }
 
       // calorimeter extrapolation
       for(const auto& calo_layer:std::initializer_list<int>{SvtxTrack::HCALIN, SvtxTrack::HCALOUT, TOPO_HCAL})
       {
         if( const auto result = find_calo_cluster_hcal(calo_layer,track) )
-        { track_struct._calo_clusters.push_back( result.value() ); }
+        {
+          switch( calo_layer )
+          {
+            case SvtxTrack::HCALIN:
+            track_struct._calo_cluster_ihcal = result.value();
+            break;
+
+            case SvtxTrack::HCALOUT:
+            track_struct._calo_cluster_ohcal = result.value();
+            break;
+
+            case TOPO_HCAL:
+            track_struct._calo_cluster_topo = result.value();
+            break;
+          }
+        }
       }
     }
 
@@ -1387,14 +1404,14 @@ void TrackingEvaluator_hp::print_clusters() const
     {
 
       const auto trkrId = TrkrDefs::getTrkrId( clusterkey );
-      if( trkrId==TrkrDefs::inttId )
-      { print_cluster( clusterkey, cluster ); }
-
-      if( trkrId==TrkrDefs::mvtxId )
-      { print_cluster( clusterkey, cluster ); }
-
-//       if( trkrId==TrkrDefs::tpcId )
+//       if( trkrId==TrkrDefs::inttId )
 //       { print_cluster( clusterkey, cluster ); }
+
+//       if( trkrId==TrkrDefs::mvtxId )
+//       { print_cluster( clusterkey, cluster ); }
+
+      if( trkrId==TrkrDefs::tpcId )
+      { print_cluster( clusterkey, cluster ); }
 
 //       if( trkrId==TrkrDefs::micromegasId )
 //       { print_cluster( clusterkey, cluster ); }
@@ -1425,6 +1442,7 @@ void TrackingEvaluator_hp::print_cluster( TrkrDefs::cluskey ckey, TrkrCluster* c
       << " detector: " << int(TrkrDefs::getTrkrId( ckey ))
       << " local: (" << cluster->getLocalX() << ", " << cluster->getLocalY() << ")"
       << " global: (" << global.x() << ", " << global.y() << ", " << global.z() << ")"
+      << " phi: " << std::atan2( global.y(), global.x() )
       << std::endl;
   }
 
@@ -2282,21 +2300,38 @@ std::optional<TrackingEvaluator_hp::CaloClusterStruct> TrackingEvaluator_hp::fin
     // calculate distance between track state and cluster
     const auto& state = state_iter->second;
 
-    // extrapolate track state to same r as cluster and calculate distance
-    // need to extrapolate to the right r
-    const auto trk_r = get_r( state->get_x(), state->get_y() );
-    const auto dr = cluster_r - trk_r;
+    // calculate distance from track to cluster and corresponding track coordinates
+    double d = 0;
+    double trk_x = 0;
+    double trk_y = 0;
+    double trk_z = 0;
+    if( true )
+    {
+      // no extrapolation
+      trk_x =  state->get_x();
+      trk_y =  state->get_y();
+      trk_z =  state->get_z();
+      d = square(trk_x - cluster->get_x()) + square(trk_y - cluster->get_y()) + square(trk_z- cluster->get_z());
 
-    const auto trk_drdt = (state->get_x()*state->get_px() + state->get_y()*state->get_py())/trk_r;
-    const auto trk_dxdr = state->get_px()/trk_drdt;
-    const auto trk_dydr = state->get_py()/trk_drdt;
-    const auto trk_dzdr = state->get_pz()/trk_drdt;
+    } else {
 
-    const auto trk_x = state->get_x() + dr*trk_dxdr;
-    const auto trk_y = state->get_y() + dr*trk_dydr;
-    const auto trk_z = state->get_z() + dr*trk_dzdr;
+      // extrapolate track state to same r as cluster and calculate distance
+      const auto trk_r = get_r( state->get_x(), state->get_y() );
+      const auto dr = cluster_r - trk_r;
 
-    const double d = square(trk_x - cluster->get_x()) + square(trk_y - cluster->get_y()) + square(trk_z- cluster->get_z());
+      const auto trk_drdt = (state->get_x()*state->get_px() + state->get_y()*state->get_py())/trk_r;
+      const auto trk_dxdr = state->get_px()/trk_drdt;
+      const auto trk_dydr = state->get_py()/trk_drdt;
+      const auto trk_dzdr = state->get_pz()/trk_drdt;
+
+      trk_x = state->get_x() + dr*trk_dxdr;
+      trk_y = state->get_y() + dr*trk_dydr;
+      trk_z = state->get_z() + dr*trk_dzdr;
+
+      d = square(trk_x - cluster->get_x()) + square(trk_y - cluster->get_y()) + square(trk_z- cluster->get_z());
+
+    }
+
     if( dmin < 0 || d < dmin )
     {
       dmin = d;
@@ -2320,7 +2355,7 @@ std::optional<TrackingEvaluator_hp::CaloClusterStruct> TrackingEvaluator_hp::fin
 std::optional<TrackingEvaluator_hp::CaloClusterStruct> TrackingEvaluator_hp::find_calo_cluster_hcal( int calo_layer, SvtxTrack* track ) const
 {
 
-  std::cout << "TrackingEvaluator_hp::find_calo_cluster_hcal- layer: " << calo_layer << std::endl;
+  // std::cout << "TrackingEvaluator_hp::find_calo_cluster_hcal - layer: " << calo_layer << std::endl;
 
   // check layer
   if( m_rawclustercontainermap.find(calo_layer) == m_rawclustercontainermap.end() ) { return {}; }
