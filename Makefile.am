@@ -18,9 +18,12 @@ lib_LTLIBRARIES = \
 
 libg4eval_hp_la_LIBADD = \
   -lCLHEP \
+  -lcalotrigger \
   -lffarawobjects\
   -lfun4all \
   -lg4detectors_io \
+  -lgsl \
+  -lgslcblas \
   -lintt_io \
   -lmbd_io \
   -lmicromegas_io \
@@ -33,8 +36,7 @@ libg4eval_hp_la_LIBADD = \
   -ltrackbase_historic_io \
   -ltrackbase_historic \
   -ltrack_io \
-  -lgsl \
-  -lgslcblas
+  -lqautils
 
 pkginclude_HEADERS = \
   ClearTrackSeeds_hp.h \
@@ -47,7 +49,8 @@ pkginclude_HEADERS = \
   PHPythia8_hp.h \
   SimEvaluator_hp.h \
   TrackingEvaluator_hp.h \
-  TrackingEvaluatorLight_hp.h
+  TrackingEvaluatorLight_hp.h \
+  TriggerCounter_hp.h
 
 ROOTDICTS = \
   MicromegasClusterEvaluator_hp_Dict.cc \
@@ -72,6 +75,21 @@ nobase_dist_pcm_DATA = \
   TrackingEvaluator_hp_Dict_rdict.pcm \
   TrackingEvaluatorLight_hp_Dict_rdict.pcm
 
+# libg4eval_hp_la_SOURCES = \
+#   $(ROOTDICTS) \
+#   ClearTrackSeeds_hp.cc \
+#   EventCounter_hp.cc \
+#   MicromegasClusterEvaluator_hp.cc \
+#   MicromegasEvaluator_hp.cc \
+#   MicromegasGeometryContainer.cc \
+#   MicromegasTrackEvaluator_hp.cc \
+#   MultiplicityEvaluator_hp.cc \
+#   PHPythia8_hp.cc \
+#   SimEvaluator_hp.cc \
+#   TrackingEvaluator_hp.cc \
+#   TrackingEvaluatorLight_hp.cc \
+#   TriggerCounter_hp.cc
+
 libg4eval_hp_la_SOURCES = \
   $(ROOTDICTS) \
   ClearTrackSeeds_hp.cc \
@@ -84,7 +102,8 @@ libg4eval_hp_la_SOURCES = \
   PHPythia8_hp.cc \
   SimEvaluator_hp.cc \
   TrackingEvaluator_hp.cc \
-  TrackingEvaluatorLight_hp.cc
+  TrackingEvaluatorLight_hp.cc \
+  TriggerCounter_hp.cc
 
 # Rule for generating table CINT dictionaries.
 %_Dict.cc: %.h %LinkDef.h
