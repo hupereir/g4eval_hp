@@ -22,7 +22,7 @@ TriggerCounter_hp::TriggerCounter_hp( const std::string& name ):
 { std::cout << "TriggerCounter_hp::TriggerCounter_hp." << std::endl; }
 
 //_____________________________________________________________________
-int TriggerCounter_hp::Init(PHCompositeNode*)
+int TriggerCounter_hp::Init(PHCompositeNode* topNode)
 {
 
   std::cout << "TriggerCounter_hp::Init." << std::endl;
@@ -40,7 +40,7 @@ int TriggerCounter_hp::Init(PHCompositeNode*)
   // assign trigger names to bins
   m_triggeranalyzer->decodeTriggers(topNode);
   for (int i = 0; i < n_trigger_bits; ++i)
-  { m_h_trigger_stat->SetBinLabel(i+1, m_triggeranalyzer->getTriggerName(i).c_str() ); }
+  { m_h_trigger_stat->GetXaxis()->SetBinLabel(i+1, m_triggeranalyzer->getTriggerName(i).c_str() ); }
 
   // register
   hm->registerHisto(m_h_trigger_stat);
@@ -80,7 +80,7 @@ int TriggerCounter_hp::End(PHCompositeNode*)
     {
       std::cout << "TriggerCounter_hp::End -"
         << " trigger bit: " << i
-        << " name: " << m_h_trigger_stat->GetBinLabel(i+1)
+        << " name: " << m_h_trigger_stat->GetXaxis()->GetBinLabel(i+1)
         << " counts: " << m_h_trigger_stat->GetBinContent(i+1)
         << std::endl;
     }
